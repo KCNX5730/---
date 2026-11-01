@@ -870,20 +870,6 @@
 
 <script>
 /* ================================================================
-   AUDIO GLOBAL
-   ================================================================ */
-const globalClickSound = new Audio('https://files.catbox.moe/6bkge2.mp3');
-globalClickSound.preload = 'auto';
-document.addEventListener('pointerdown', (e) => {
-  if (e.pointerType === 'mouse' && e.button !== 0) return;
-  if (e.target.closest('input, textarea, iframe')) return;
-  if (document.getElementById('restart-screen').style.display === 'flex' ||
-      document.getElementById('shutdown-screen').style.display === 'flex') return;
-  globalClickSound.currentTime = 0;
-  globalClickSound.play().catch(() => {});
-});
-
-/* ================================================================
    FULLSCREEN CONTROLLER
    ================================================================ */
 function isFullscreen() {
@@ -1377,8 +1363,6 @@ document.getElementById('btnRestart').addEventListener('click', () => {
   document.getElementById('startMenu').classList.remove('open');
   document.getElementById('desktop').classList.remove('blurred');
   document.getElementById('restart-screen').style.display = 'flex';
-  const restartSound = new Audio('https://files.catbox.moe/a6tds4.mp3');
-  restartSound.play().catch(()=>{});
   setTimeout(() => {
     location.reload();
   }, 3000);
