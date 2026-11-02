@@ -156,7 +156,13 @@
   .star-btn.saved { color: #f2a63b; }
   .star-btn.saved svg path { fill: currentColor; }
 
-  /* Rectangular Fullscreen Button with RGB moving water-like background effect & '–' symbol */
+  /* Rectangular Fullscreen Container with RGB moving water-like background effect & 3px rounded-rectangle image */
+  .fs-container {
+    display: flex;
+    align-items: center;
+    gap: 4px;
+    cursor: pointer;
+  }
   .rect-fs-btn {
     width: 36px;
     height: 28px;
@@ -166,11 +172,6 @@
     border-radius: 4px;
     position: relative;
     overflow: hidden;
-    cursor: pointer;
-    color: #fff;
-    font-size: 11px;
-    font-weight: normal;
-    text-shadow: 0 1px 1px rgba(0,0,0,0.9);
     box-shadow: 0 1px 3px rgba(0,0,0,0.2);
   }
   .rect-fs-btn::before {
@@ -182,10 +183,21 @@
     animation: waterFlow 4s ease infinite;
     z-index: 0;
   }
-  .rect-fs-btn span {
+  .rect-fs-btn img {
+    width: 3px;
+    height: 3px;
     position: relative;
     z-index: 1;
+    object-fit: contain;
   }
+  .fs-label {
+    font-size: 8px;
+    color: #333a41;
+    font-weight: 600;
+    text-transform: lowercase;
+    user-select: none;
+  }
+
   @keyframes waterFlow {
     0% { background-position: 0% 50%; }
     50% { background-position: 100% 50%; }
@@ -241,14 +253,16 @@
     align-items: center;
     justify-content: center;
     background: rgb(255, 0, 0);
-    color: #fff;
-    font-size: 10px;
-    font-weight: normal;
     border: 1px dashed rgba(255, 255, 255, 0.9);
     border-radius: 2px;
     cursor: pointer;
     box-shadow: 0 2px 8px rgba(255, 0, 0, 0.5);
     transition: background 0.15s, transform 0.15s;
+  }
+  .close-fs-btn img {
+    width: 3px;
+    height: 3px;
+    object-fit: contain;
   }
   .close-fs-btn:hover {
     background: rgb(220, 0, 0);
@@ -461,9 +475,9 @@
 <body>
 
 <div class="browser" id="browserApp">
-  <!-- Floating Close Fullscreen button (Cut rectangle style, pure red color, symbol: •◦, visible only in fullscreen) -->
+  <!-- Floating Close Fullscreen button (Cut rectangle style, pure red color, rounded-rectangle icon, visible only in fullscreen) -->
   <button class="close-fs-btn" id="closeFullScreenBtn" title="Exit Full Screen" hidden>
-    <span>•◦</span>
+    <img src="https://img.icons8.com/pulsar-gradient/48/rounded-rectangle.png" alt="rounded-rectangle"/>
   </button>
 
   <!-- Tab bar -->
@@ -503,10 +517,13 @@
       <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round"><circle cx="12" cy="8" r="4"/><path d="M4 21c0-4 3.6-6 8-6s8 2 8 6"/></svg>
     </button>
     
-    <!-- Rectangular Full Screen Button placed in the right topic area with RGB fluid background & symbol: – -->
-    <button class="rect-fs-btn" id="fullScreenBtn" title="Enter Full Screen">
-      <span>–</span>
-    </button>
+    <!-- Full Screen Button container with label 'fullscreen' and icon -->
+    <div class="fs-container" id="fullScreenBtn" title="Enter Full Screen">
+      <div class="rect-fs-btn">
+        <img src="https://img.icons8.com/pulsar-gradient/48/rounded-rectangle.png" alt="rounded-rectangle"/>
+      </div>
+      <span class="fs-label">fullscreen</span>
+    </div>
 
     <button class="nav-btn" id="menuBtn" title="Settings and more">
       <svg width="16" height="16" viewBox="0 0 24 24" fill="currentColor"><circle cx="5" cy="12" r="1.8"/><circle cx="12" cy="12" r="1.8"/><circle cx="19" cy="12" r="1.8"/></svg>
