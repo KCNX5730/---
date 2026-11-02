@@ -143,21 +143,40 @@
   .star-btn.saved { color: #f2a63b; }
   .star-btn.saved svg path { fill: currentColor; }
 
-  /* Rectangular Fullscreen Button in Right Topic Area */
+  /* Rectangular Fullscreen Button with RGB moving water-like background effect & '–' symbol */
   .rect-fs-btn {
     width: 36px;
     height: 28px;
     display: grid;
     place-items: center;
-    border: 1px solid rgba(0, 0, 0, 0.15);
-    border-radius: 4px;
-    background: rgba(255, 255, 255, 0.5);
-    color: #333a41;
+    border: 2px solid rgba(255, 255, 255, 0.6);
+    border-radius: 5px;
+    position: relative;
+    overflow: hidden;
     cursor: pointer;
-    transition: background 0.15s;
+    color: #fff;
+    font-size: 15px;
+    font-weight: bold;
+    text-shadow: 0 1px 2px rgba(0,0,0,0.8);
+    box-shadow: 0 2px 5px rgba(0,0,0,0.2);
   }
-  .rect-fs-btn:hover {
-    background: rgba(255, 255, 255, 0.85);
+  .rect-fs-btn::before {
+    content: "";
+    position: absolute;
+    inset: -50%;
+    background: linear-gradient(45deg, rgb(255, 0, 0), rgb(0, 255, 0), rgb(0, 0, 255), rgb(255, 0, 0));
+    background-size: 300% 300%;
+    animation: waterFlow 4s ease infinite;
+    z-index: 0;
+  }
+  .rect-fs-btn span {
+    position: relative;
+    z-index: 1;
+  }
+  @keyframes waterFlow {
+    0% { background-position: 0% 50%; }
+    50% { background-position: 100% 50%; }
+    100% { background-position: 0% 50%; }
   }
 
   .address-bar {
@@ -197,27 +216,29 @@
   }
   .profile-btn:hover { background: #cfe3fd; }
 
-  /* ---------- Floating Close Fullscreen Button ---------- */
+  /* ---------- Floating Close Fullscreen Button (Cut Rectangle, Pure Red Background, '•◦' symbol) ---------- */
   .close-fs-btn {
     position: fixed;
     top: 12px;
     right: 16px;
     z-index: 9999;
-    width: 34px;
-    height: 34px;
+    width: 36px;
+    height: 28px;
     display: flex;
     align-items: center;
     justify-content: center;
-    background: rgba(0, 0, 0, 0.55);
+    background: rgb(255, 0, 0); /* Pure red color */
     color: #fff;
-    border: 1px dashed rgba(255, 255, 255, 0.6); /* Cut rectangle appearance */
-    border-radius: 4px;
+    font-size: 13px;
+    font-weight: bold;
+    border: 2px dashed rgba(255, 255, 255, 0.9); /* Cut rectangle appearance with border */
+    border-radius: 2px;
     cursor: pointer;
-    backdrop-filter: blur(8px);
+    box-shadow: 0 4px 12px rgba(255, 0, 0, 0.5);
     transition: background 0.15s, transform 0.15s;
   }
   .close-fs-btn:hover {
-    background: rgba(0, 0, 0, 0.8);
+    background: rgb(220, 0, 0);
     transform: scale(1.05);
   }
 
@@ -255,56 +276,56 @@
   .tab-content.active { display: block; }
   iframe { width: 100%; height: 100%; border: none; background: #fff; }
 
-  /* ---------- New tab page (Optimized Bing Search Container Size) ---------- */
+  /* ---------- New tab page (Slightly smaller Bing Search Container) ---------- */
   .newtab {
     height: 100%;
     display: flex; flex-direction: column;
     align-items: center;
-    gap: 20px;
-    padding: 6vh 20px 20px; /* Reduced vertical padding */
+    gap: 16px;
+    padding: 5vh 16px 16px;
     overflow: auto;
     background: transparent;
     color: #fff;
     text-shadow: 0 1px 6px rgba(0, 0, 0, 0.55);
   }
-  .nt-greeting { font-size: 22px; font-weight: 600; letter-spacing: .2px; color: #fff; }
+  .nt-greeting { font-size: 20px; font-weight: 600; letter-spacing: .2px; color: #fff; }
   .nt-search {
-    width: min(500px, 92%); /* Made Bing size slightly smaller */
-    height: 44px;           /* Slightly smaller search box height */
-    display: flex; align-items: center; gap: 10px;
-    padding: 0 16px;
+    width: min(440px, 88%); /* Made Bing search container slightly smaller */
+    height: 40px;           /* Slightly smaller search box height */
+    display: flex; align-items: center; gap: 8px;
+    padding: 0 14px;
     background: rgba(255, 255, 255, 0.90);
     backdrop-filter: blur(14px);
     -webkit-backdrop-filter: blur(14px);
     border: 1px solid rgba(255, 255, 255, 0.5);
-    border-radius: 22px;
-    box-shadow: 0 4px 18px rgba(0, 0, 0, 0.2);
+    border-radius: 20px;
+    box-shadow: 0 4px 16px rgba(0, 0, 0, 0.2);
   }
-  .nt-search svg { flex: none; color: #8a94a0; }
+  .nt-search svg { flex: none; color: #8a94a0; width: 14px; height: 14px; }
   .nt-search input {
     flex: 1; min-width: 0;
     border: none; outline: none;
     background: transparent;
-    font-size: 14px; color: #1f2933;
+    font-size: 13px; color: #1f2933;
     font-family: inherit;
     text-shadow: none;
   }
   
   /* Fixed layout using CSS Grid */
   .nt-links {
-    width: min(560px, 95%);
+    width: min(500px, 92%);
     display: grid;
-    grid-template-columns: repeat(auto-fill, minmax(72px, 1fr));
-    gap: 10px;
+    grid-template-columns: repeat(auto-fill, minmax(66px, 1fr));
+    gap: 8px;
     justify-items: center;
   }
 
   .nt-link {
-    width: 72px;
-    display: flex; flex-direction: column; align-items: center; gap: 6px;
-    padding: 8px 4px;
+    width: 66px;
+    display: flex; flex-direction: column; align-items: center; gap: 4px;
+    padding: 6px 2px;
     border: none;
-    border-radius: 10px;
+    border-radius: 8px;
     background: transparent;
     cursor: pointer;
     font-family: inherit;
@@ -313,26 +334,26 @@
   }
   .nt-link:hover { background: rgba(255, 255, 255, 0.14); transform: translateY(-1px); }
   .nt-icon {
-    width: 42px; height: 42px;
+    width: 38px; height: 38px;
     display: grid; place-items: center;
-    border-radius: 10px;
+    border-radius: 9px;
     color: #fff;
-    font-size: 17px; font-weight: 600;
-    box-shadow: 0 2px 8px rgba(0, 0, 0, 0.2);
+    font-size: 15px; font-weight: 600;
+    box-shadow: 0 2px 6px rgba(0, 0, 0, 0.2);
   }
   .nt-label {
-    font-size: 11px; color: #fff; font-weight: 500;
+    font-size: 10.5px; color: #fff; font-weight: 500;
     max-width: 100%;
     overflow: hidden; text-overflow: ellipsis; white-space: nowrap;
   }
   .nt-remove {
     position: absolute;
-    top: 2px; right: 4px;
-    width: 18px; height: 18px;
+    top: 2px; right: 2px;
+    width: 16px; height: 16px;
     border: none; border-radius: 50%;
     background: rgba(0, 0, 0, 0.5);
     color: #fff;
-    font-size: 12px; line-height: 1;
+    font-size: 11px; line-height: 1;
     display: grid; place-items: center;
     cursor: pointer;
     opacity: 0;
@@ -343,7 +364,7 @@
 
   .nt-add .nt-icon {
     background: rgba(255, 255, 255, 0.18);
-    font-size: 22px;
+    font-size: 20px;
     font-weight: 300;
     line-height: 1;
     box-shadow: none;
@@ -353,7 +374,7 @@
   .nt-hint {
     margin-top: auto;
     max-width: 680px;
-    font-size: 12px;
+    font-size: 11.5px;
     color: rgba(255, 255, 255, 0.7);
     text-align: center;
     letter-spacing: 0.5px;
@@ -428,11 +449,9 @@
 <body>
 
 <div class="browser" id="browserApp">
-  <!-- Floating Close Fullscreen button (Cut rectangle style, visible only in fullscreen) -->
+  <!-- Floating Close Fullscreen button (Cut rectangle style, pure red color, symbol: •◦, visible only in fullscreen) -->
   <button class="close-fs-btn" id="closeFullScreenBtn" title="Exit Full Screen" hidden>
-    <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
-      <path d="M8 3v3a2 2 0 0 1-2 2H3m18 0h-3a2 2 0 0 1-2-2V3m0 18v-3a2 2 0 0 1 2-2h3M3 16h3a2 2 0 0 1 2 2v3"/>
-    </svg>
+    <span>•◦</span>
   </button>
 
   <!-- Tab bar -->
@@ -472,11 +491,9 @@
       <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round"><circle cx="12" cy="8" r="4"/><path d="M4 21c0-4 3.6-6 8-6s8 2 8 6"/></svg>
     </button>
     
-    <!-- Rectangular Full Screen Button placed in the right topic area -->
+    <!-- Rectangular Full Screen Button placed in the right topic area with RGB fluid background & symbol: – -->
     <button class="rect-fs-btn" id="fullScreenBtn" title="Enter Full Screen">
-      <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
-        <path d="M8 3H5a2 2 0 0 0-2 2v3m18 0V5a2 2 0 0 0-2-2h-3m0 18h3a2 2 0 0 0 2-2v-3M3 16v3a2 2 0 0 0 2 2h3"/>
-      </svg>
+      <span>–</span>
     </button>
 
     <button class="nav-btn" id="menuBtn" title="Settings and more">
@@ -707,7 +724,7 @@
     const form = document.createElement("form");
     form.className = "nt-search";
     form.innerHTML =
-      '<svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round">' +
+      '<svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round">' +
       '<circle cx="11" cy="11" r="7"/><path d="M20 20l-3.5-3.5"/></svg>' +
       '<input type="text" placeholder="Search the web" autocomplete="off" />';
     const input = form.querySelector("input");
