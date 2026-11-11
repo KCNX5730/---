@@ -1,0 +1,2276 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0, user-scalable=no, maximum-scale=1.0, viewport-fit=cover">
+  <meta name="theme-color" content="#f3f3f3">
+  <meta name="mobile-web-app-capable" content="yes">
+  <meta name="apple-mobile-web-app-capable" content="yes">
+  <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
+  <title>KCNXClientServer 192.10.22</title>
+
+  <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.5.1/css/all.min.css">
+
+  <style>
+    * {
+      margin: 0;
+      padding: 0;
+      box-sizing: border-box;
+      -webkit-tap-highlight-color: transparent;
+      user-select: none;
+      -webkit-user-select: none;
+    }
+
+    :root {
+      --win-bg: #ffffff;
+      --win-text: #1a1a1a;
+      --win-text-dim: #555;
+      --accent: #0067c0;
+      --accent-glow: rgba(0, 103, 192, 0.35);
+      --taskbar-h: 48px;
+      --win-radius: 12px;
+      --glass: rgba(243, 243, 243, 0.85);
+      --border-light: rgba(0, 0, 0, 0.1);
+      --tray-hover: rgba(0, 0, 0, 0.06);
+    }
+
+    html, body {
+      height: 100%;
+      height: 100dvh;
+      width: 100%;
+      overflow: hidden;
+      font-family: 'Segoe UI Variable', 'Segoe UI', system-ui, -apple-system, sans-serif;
+      background: #000;
+      touch-action: none;
+      overscroll-behavior: none;
+    }
+
+    #fs-hint {
+      position: fixed;
+      bottom: calc(var(--taskbar-h) + 16px);
+      left: 50%;
+      transform: translateX(-50%);
+      background: rgba(0, 0, 0, 0.78);
+      color: #fff;
+      font-size: 12px;
+      letter-spacing: 0.2px;
+      padding: 9px 18px;
+      border-radius: 20px;
+      z-index: 10000;
+      pointer-events: none;
+      display: none;
+      opacity: 1;
+      transition: opacity 0.45s ease;
+      backdrop-filter: blur(10px);
+      -webkit-backdrop-filter: blur(10px);
+      white-space: nowrap;
+    }
+    #fs-hint.hide { opacity: 0; }
+    @media (max-width: 380px) { #fs-hint { font-size: 11px; padding: 7px 14px; } }
+
+    #loading-screen {
+      position: fixed;
+      inset: 0;
+      background: #000;
+      z-index: 9999;
+      display: flex;
+      flex-direction: column;
+      align-items: center;
+      justify-content: center;
+      transition: opacity 0.7s ease;
+    }
+    #loading-screen.hidden { opacity: 0; pointer-events: none; }
+    .loading-logo {
+      width: 90px; height: auto; margin-bottom: 44px;
+      filter: drop-shadow(0 0 30px rgba(76, 194, 255, 0.25));
+    }
+    .spinner {
+      width: 30px; height: 30px;
+      border: 3px solid rgba(255,255,255,0.12);
+      border-top-color: #fff;
+      border-radius: 50%;
+      animation: spin 1s linear infinite;
+    }
+    @keyframes spin { to { transform: rotate(360deg); } }
+
+    .desktop {
+      position: fixed;
+      inset: 0;
+      display: flex;
+      flex-direction: column;
+      background-image: url('https://raw.githubusercontent.com/notAperson535/Win11-HTML/c4289ccd494bea102381b6f0765c0d4fd802c9c3/img/backgroundlight.jpg');
+      background-size: cover;
+      background-position: center;
+      background-repeat: no-repeat;
+      transition: filter 0.3s ease, background-image 0.3s ease;
+    }
+    .desktop.blurred { filter: blur(6px) brightness(0.9); }
+
+    .desktop-surface {
+      position: relative;
+      z-index: 2;
+      flex: 1;
+      width: 100%;
+      height: 100%;
+    }
+
+    .desktop-icons-container {
+      position: absolute;
+      top: 10px; left: 10px;
+      display: flex;
+      flex-direction: column;
+      gap: 8px;
+      z-index: 5;
+    }
+    .desktop-icon {
+      display: flex;
+      flex-direction: column;
+      align-items: center;
+      width: 56px;
+      padding: 5px 4px;
+      border-radius: 3px;
+      cursor: pointer;
+      color: #fff;
+      text-shadow: 0 1px 3px rgba(0,0,0,0.85);
+      transition: background 0.1s;
+    }
+    .desktop-icon img {
+      width: 32px;
+      height: 32px;
+      margin-bottom: 3px;
+      object-fit: contain;
+      pointer-events: none;
+    }
+    .desktop-icon span {
+      font-size: 9.5px;
+      line-height: 1.15;
+      text-align: center;
+      pointer-events: none;
+    }
+    .desktop-icon:hover { background: rgba(255,255,255,0.15); }
+    .desktop-icon:active,
+    .desktop-icon.selected { background: rgba(0, 120, 215, 0.45); }
+
+    #selection-box {
+      position: absolute;
+      border: 1px solid #0078D7;
+      background: rgba(0, 120, 215, 0.3);
+      border-radius: 2px;
+      display: none;
+      z-index: 10;
+      pointer-events: none;
+    }
+
+    .context-menu {
+      position: absolute;
+      background: rgba(255, 255, 255, 0.97);
+      backdrop-filter: blur(20px);
+      border: 1px solid rgba(0,0,0,0.1);
+      border-radius: 8px;
+      box-shadow: 0 6px 20px rgba(0,0,0,0.2);
+      padding: 5px;
+      display: none;
+      z-index: 500;
+      min-width: 160px;
+    }
+    .context-item {
+      padding: 7px 11px;
+      font-size: 12px;
+      color: #000;
+      border-radius: 4px;
+      cursor: pointer;
+      display: flex;
+      align-items: center;
+      gap: 9px;
+    }
+    .context-item:hover { background: rgba(0,0,0,0.06); }
+    .context-item i { width: 14px; text-align: center; font-size: 12px; color: #444; }
+    .context-sep { height: 1px; background: rgba(0,0,0,0.08); margin: 4px 6px; }
+
+    .taskbar {
+      position: relative;
+      z-index: 100;
+      height: var(--taskbar-h);
+      background: var(--glass);
+      backdrop-filter: blur(30px) saturate(1.6);
+      -webkit-backdrop-filter: blur(30px) saturate(1.6);
+      border-top: 1px solid var(--border-light);
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      padding: 0 8px;
+      box-shadow: 0 -2px 12px rgba(0,0,0,0.05);
+    }
+
+    .weather-widget {
+      position: absolute;
+      left: 8px;
+      display: flex;
+      align-items: center;
+      gap: 6px;
+      height: 100%;
+      cursor: pointer;
+      padding: 0 5px;
+      border-radius: 4px;
+      transition: background 0.12s;
+    }
+    .weather-widget:hover { background: var(--tray-hover); }
+    .weather-widget img { width: 20px; height: 20px; object-fit: contain; }
+    .weather-info { display: flex; flex-direction: column; color: #000; line-height: 1.15; }
+    .weather-temp { font-size: 11px; font-weight: 600; }
+    .weather-desc { font-size: 9.5px; opacity: 0.75; }
+
+    .taskbar-center { display: flex; align-items: center; gap: 3px; height: 100%; }
+
+    .taskbar-icon {
+      width: 38px; height: 38px;
+      display: flex; align-items: center; justify-content: center;
+      border-radius: 6px;
+      cursor: pointer;
+      transition: background 0.12s, transform 0.08s;
+      position: relative;
+      touch-action: manipulation;
+    }
+    .taskbar-icon img { width: 22px; height: 22px; object-fit: contain; pointer-events: none; }
+    .taskbar-icon[data-app="start"] img { width: 24px; height: 24px; }
+    .taskbar-icon:hover { background: rgba(0,0,0,0.06); }
+    .taskbar-icon:active { transform: scale(0.88); }
+
+    .taskbar-icon.active-app::after {
+      content: '';
+      position: absolute;
+      bottom: 1px; left: 50%;
+      transform: translateX(-50%);
+      width: 14px; height: 3px;
+      background: var(--accent);
+      border-radius: 2px;
+    }
+
+    .taskbar-tray {
+      position: absolute; right: 6px;
+      display: flex; align-items: center; gap: 1px;
+      color: #000; font-size: 12px;
+      height: 100%;
+    }
+
+    .tray-item {
+      display: flex; align-items: center; justify-content: center;
+      height: 30px; padding: 0 5px;
+      border-radius: 4px;
+      cursor: pointer;
+      transition: background 0.12s;
+      position: relative;
+      gap: 3px;
+    }
+    .tray-item:hover { background: var(--tray-hover); }
+    .tray-item:active { background: rgba(0,0,0,0.12); }
+    .tray-item img {
+      width: 15px; height: 15px;
+      object-fit: contain;
+      filter: brightness(0);
+      pointer-events: none;
+    }
+
+    .lang-stacked {
+      display: flex; flex-direction: column; align-items: center;
+      line-height: 1.05; font-size: 9.5px; font-weight: 600;
+      letter-spacing: 0.4px; color: #000;
+    }
+
+    .tray-clock {
+      display: flex; flex-direction: column; align-items: flex-end; justify-content: center;
+      padding: 0 8px; cursor: pointer; border-radius: 4px;
+      height: 34px; color: #000;
+    }
+    .tray-clock:hover { background: var(--tray-hover); }
+    .tray-clock span {
+      font-size: 10.5px; font-weight: 400; letter-spacing: 0.4px; line-height: 1.2;
+    }
+
+    .tray-flyout {
+      position: fixed;
+      bottom: calc(var(--taskbar-h) + 8px);
+      right: 12px;
+      width: 240px;
+      background: rgba(243, 243, 243, 0.96);
+      backdrop-filter: blur(30px) saturate(1.5);
+      -webkit-backdrop-filter: blur(30px) saturate(1.5);
+      border-radius: 10px;
+      box-shadow: 0 10px 30px rgba(0,0,0,0.15);
+      border: 1px solid rgba(0,0,0,0.1);
+      z-index: 250;
+      padding: 12px;
+      opacity: 0;
+      pointer-events: none;
+      transform: translateY(10px);
+      transition: opacity 0.15s ease, transform 0.15s ease;
+      display: flex;
+      flex-direction: column;
+      gap: 8px;
+    }
+    .tray-flyout.open { opacity: 1; pointer-events: auto; transform: translateY(0); }
+
+    .flyout-title {
+      font-size: 12px; font-weight: 600; color: #000;
+      padding-bottom: 6px;
+      border-bottom: 1px solid rgba(0,0,0,0.1);
+      margin-bottom: 4px;
+      display: flex; justify-content: space-between; align-items: center;
+    }
+    .flyout-row {
+      display: flex; align-items: center; justify-content: space-between;
+      padding: 6px 0; font-size: 12px; color: #333;
+      cursor: pointer; border-radius: 4px;
+    }
+    .flyout-row:hover { color: #000; background: rgba(0,0,0,0.05); }
+
+    .settings-toggle {
+      width: 38px; height: 20px; border-radius: 10px; background: #ccc;
+      position: relative; cursor: pointer; transition: background 0.2s;
+    }
+    .settings-toggle.on { background: var(--accent); }
+    .settings-toggle::after {
+      content: ''; position: absolute; top: 3px; left: 3px;
+      width: 14px; height: 14px; border-radius: 50%; background: #fff;
+      transition: transform 0.2s;
+    }
+    .settings-toggle.on::after { transform: translateX(18px); }
+
+    .start-menu {
+      position: fixed;
+      bottom: calc(var(--taskbar-h) + 10px);
+      left: 50%;
+      transform: translateX(-50%) translateY(18px);
+      width: min(600px, 92vw);
+      height: 560px;
+      background: rgba(243, 243, 243, 0.96);
+      backdrop-filter: blur(40px) saturate(1.5);
+      -webkit-backdrop-filter: blur(40px) saturate(1.5);
+      border-radius: 12px;
+      box-shadow: 0 12px 40px rgba(0,0,0,0.15);
+      z-index: 200;
+      display: flex;
+      flex-direction: column;
+      opacity: 0;
+      pointer-events: none;
+      transition: opacity 0.2s ease, transform 0.2s ease;
+      border: 1px solid rgba(0,0,0,0.1);
+    }
+    .start-menu.open { opacity: 1; pointer-events: auto; transform: translateX(-50%) translateY(0); }
+
+    .start-header {
+      display: flex; justify-content: space-between; align-items: center;
+      padding: 16px 20px 8px;
+      font-weight: 600; color: #000; font-size: 13px;
+    }
+    .all-apps-btn { cursor: pointer; }
+
+    .start-apps {
+      flex: 1;
+      display: grid;
+      grid-template-columns: repeat(6, 1fr);
+      gap: 1px;
+      padding: 0 12px 12px;
+      overflow-y: auto;
+      align-content: start;
+    }
+    .start-app-item {
+      display: flex; flex-direction: column; align-items: center;
+      padding: 10px 3px; border-radius: 5px;
+      cursor: pointer;
+      transition: background 0.1s;
+      color: #000;
+      touch-action: manipulation;
+    }
+    .start-app-item:hover { background: rgba(0,0,0,0.05); }
+    .start-app-item:active { background: rgba(0,0,0,0.1); transform: scale(0.93); }
+    .start-app-item img { width: 26px; height: 26px; margin-bottom: 4px; object-fit: contain; pointer-events: none; }
+    .start-app-item span { font-size: 10px; text-align: center; line-height: 1.15; }
+
+    .start-footer {
+      display: flex;
+      justify-content: space-between;
+      align-items: center;
+      padding: 12px 20px;
+      border-top: 1px solid rgba(0,0,0,0.1);
+      flex-shrink: 0;
+    }
+    .start-footer-user {
+      display: flex;
+      align-items: center;
+      gap: 8px;
+      font-size: 12px;
+      font-weight: 600;
+      color: #000;
+    }
+    .start-footer-user i { font-size: 18px; }
+    .start-footer-buttons { display: flex; gap: 4px; }
+    .start-footer-buttons button {
+      border: none;
+      background: transparent;
+      padding: 8px;
+      border-radius: 4px;
+      cursor: pointer;
+      color: #000;
+      font-size: 14px;
+    }
+    .start-footer-buttons button:hover { background: rgba(0,0,0,0.06); }
+
+    .window {
+      position: fixed;
+      top: 50%; left: 50%;
+      transform: translate(-50%, -50%) scale(0.94);
+      width: min(840px, 92vw);
+      height: min(560px, 74vh);
+      background: #ffffff;
+      border-radius: var(--win-radius);
+      box-shadow: 0 20px 60px rgba(0,0,0,0.25);
+      z-index: 300;
+      display: flex;
+      flex-direction: column;
+      opacity: 0;
+      pointer-events: none;
+      transition: opacity 0.2s ease, transform 0.2s ease;
+      overflow: hidden;
+      border: 1px solid rgba(0,0,0,0.15);
+    }
+    .window.open { opacity: 1; pointer-events: auto; transform: translate(-50%, -50%) scale(1); }
+
+    .window-header {
+      height: 36px;
+      background: #f3f3f3;
+      display: flex; align-items: center; justify-content: space-between;
+      padding: 0 0 0 12px;
+      border-bottom: 1px solid #e0e0e0;
+      cursor: grab;
+      flex-shrink: 0;
+    }
+    .window-header:active { cursor: grabbing; }
+
+    .window-title { display: flex; align-items: center; gap: 7px; font-size: 12px; color: #000; }
+    .window-title img { width: 15px; height: 15px; object-fit: contain; pointer-events: none; }
+
+    .window-controls { display: flex; height: 100%; }
+    .win-btn {
+      width: 42px; height: 100%;
+      display: flex; align-items: center; justify-content: center;
+      font-size: 11px; color: #000;
+      cursor: pointer;
+      transition: background 0.1s;
+      touch-action: manipulation;
+    }
+    .win-btn:hover { background: rgba(0,0,0,0.08); }
+    .win-btn.close:hover { background: #e81123; color: #fff; }
+    .win-btn img { width: 11px; height: 11px; filter: brightness(0); pointer-events: none; }
+    .win-btn.close:hover img { filter: brightness(0) invert(1); }
+
+    .window-body {
+      flex: 1;
+      overflow: auto;
+      padding: 14px;
+      color: var(--win-text);
+      font-size: 13px;
+      line-height: 1.5;
+      -webkit-overflow-scrolling: touch;
+      background: #ffffff;
+    }
+
+    .explorer-layout { display: flex; gap: 0; height: 100%; color: #333; }
+    .explorer-nav { width: 190px; flex-shrink: 0; border-right: 1px solid #e0e0e0; padding-right: 8px; overflow-y: auto; }
+    .explorer-nav-item { display: flex; align-items: center; gap: 7px; padding: 6px 9px; border-radius: 5px; font-size: 12px; color: #555; cursor: pointer; transition: background 0.1s; }
+    .explorer-nav-item:hover { background: rgba(0,0,0,0.05); color: #000; }
+    .explorer-nav-item.active { background: rgba(0, 103, 192, 0.1); color: var(--accent); }
+    .explorer-nav-item i { width: 15px; text-align: center; font-size: 12px; }
+    .explorer-content { flex: 1; padding-left: 14px; overflow-y: auto; display: flex; flex-direction: column; }
+    .explorer-toolbar { display: flex; gap: 8px; padding-bottom: 10px; margin-bottom: 10px; border-bottom: 1px solid #eee; align-items: center; }
+    .explorer-btn { padding: 4px 10px; border-radius: 4px; border: 1px solid #ccc; background: #f9f9f9; cursor: pointer; font-size: 11.5px; display: flex; align-items: center; gap: 5px; }
+    .explorer-btn:hover { background: #eee; }
+    
+    .explorer-grid { display: grid; grid-template-columns: repeat(auto-fill, minmax(95px, 1fr)); gap: 8px; align-content: start; }
+    .explorer-folder { display: flex; flex-direction: column; align-items: center; gap: 6px; padding: 12px 5px; border-radius: 6px; cursor: pointer; transition: background 0.1s; text-align: center; position: relative; }
+    .explorer-folder:hover { background: rgba(0,0,0,0.05); }
+    .explorer-folder:active { background: rgba(0,0,0,0.1); transform: scale(0.95); }
+    .explorer-folder img { width: 34px; height: 34px; object-fit: contain; pointer-events: none; }
+    .explorer-folder span { font-size: 10.5px; color: #333; word-break: break-word; }
+
+    .drive-container { display: flex; align-items: flex-start; gap: 10px; padding: 9px; border-radius: 6px; cursor: pointer; transition: background 0.1s; width: 220px; }
+    .drive-container:hover { background: rgba(0,0,0,0.05); }
+    .drive-info { flex: 1; }
+    .drive-name { font-size: 11.5px; font-weight: 600; color: #000; margin-bottom: 3px; }
+    .drive-bar-bg { width: 100%; height: 12px; background: #e0e0e0; border: 1px solid #ccc; border-radius: 2px; overflow: hidden; }
+    .drive-bar-fill { height: 100%; background: #0078D7; width: 46%; }
+    .drive-subtext { font-size: 10.5px; color: #555; margin-top: 3px; }
+
+    .terminal-body { background: #0c0c0c; color: #cccccc; font-family: 'Cascadia Code', 'Consolas', monospace; height: 100%; padding: 14px; border-radius: 6px; font-size: 12px; line-height: 1.5; overflow-y: auto; }
+    .terminal-line { white-space: pre-wrap; word-break: break-all; }
+    .terminal-prompt { color: #4cc2ff; }
+    .terminal-input-line { display: flex; align-items: center; gap: 7px; margin-top: 4px; }
+    .terminal-input-line input { background: transparent; border: none; outline: none; color: #cccccc; font-family: inherit; font-size: 12px; flex: 1; caret-color: #4cc2ff; cursor: text; }
+
+    .notepad-menubar { display: flex; gap: 2px; padding: 5px 10px; border-bottom: 1px solid #e0e0e0; flex-shrink: 0; background: #f9f9f9; }
+    .notepad-menubar span { font-size: 11.5px; padding: 3px 9px; border-radius: 4px; cursor: pointer; color: #555; }
+    .notepad-menubar span:hover { background: rgba(0,0,0,0.05); color: #000; }
+    .notepad-textarea { flex: 1; background: #fff; border: none; outline: none; resize: none; padding: 12px; color: #000; font-family: 'Cascadia Code', 'Consolas', monospace; font-size: 13px; line-height: 1.6; cursor: text; }
+
+    .settings-sidebar {
+      width: 220px; background: #f8bbd0; padding: 20px 10px; flex-shrink: 0; overflow-y: auto; color: #333;
+    }
+    .settings-nav-item {
+      display: flex; align-items: center; gap: 10px; padding: 10px 12px; margin-bottom: 2px;
+      border-radius: 6px; cursor: pointer; font-size: 13px; transition: background 0.1s;
+    }
+    .settings-nav-item:hover { background: rgba(255,255,255,0.3); }
+    .settings-nav-item.active { background: rgba(255,255,255,0.5); font-weight: 600; }
+    .settings-nav-item i { width: 18px; text-align: center; font-size: 14px; color: #0067c0; }
+
+    .calc-display { background: #f0f0f0; border-radius: 6px; padding: 16px; text-align: right; font-size: 30px; font-weight: 300; color: #000; margin-bottom: 9px; min-height: 60px; }
+    .calc-grid { display: grid; grid-template-columns: repeat(4, 1fr); gap: 4px; }
+    .calc-btn { padding: 13px 0; border-radius: 5px; border: none; background: #f9f9f9; color: #000; font-size: 16px; cursor: pointer; font-family: inherit; transition: background 0.1s; box-shadow: 0 1px 2px rgba(0,0,0,0.1); }
+    .calc-btn:hover { background: #e5e5e5; }
+    .calc-btn:active { background: #d5d5d5; }
+    .calc-btn.accent { background: var(--accent); color: #fff; }
+
+    .store-layout { display: flex; height: 100%; background: #fff; }
+    .store-sidebar {
+      width: 60px; background: #f0f0f0;
+      display: flex; flex-direction: column; align-items: center;
+      padding: 12px 0; gap: 20px;
+      border-right: 1px solid #e0e0e0;
+    }
+    .store-sidebar .store-nav-btn {
+      font-size: 18px; color: #555; cursor: pointer;
+      width: 40px; height: 40px; display: flex; align-items: center; justify-content: center;
+      border-radius: 8px; transition: background 0.1s;
+    }
+    .store-sidebar .store-nav-btn:hover { background: rgba(0,0,0,0.05); }
+    .store-sidebar .store-nav-btn.active { color: var(--accent); background: rgba(0, 103, 192, 0.1); }
+    .store-content { flex: 1; padding: 20px; overflow-y: auto; }
+    .store-title { font-size: 20px; font-weight: 600; margin-bottom: 16px; color: #000; }
+    
+    .store-grid {
+      display: grid;
+      grid-template-columns: repeat(auto-fill, minmax(180px, 1fr));
+      gap: 16px;
+    }
+    .store-card {
+      border: 1px solid #e0e0e0; border-radius: 8px;
+      padding: 16px; text-align: center;
+      box-shadow: 0 2px 8px rgba(0,0,0,0.05);
+      display: flex; flex-direction: column; align-items: center;
+      transition: transform 0.1s;
+    }
+    .store-card:hover { transform: translateY(-2px); }
+    .store-card img { width: 48px; height: 48px; margin-bottom: 12px; object-fit: contain; }
+    .store-card .title { font-size: 14px; font-weight: 600; color: #000; margin-bottom: 4px; }
+    .store-card .size { font-size: 11px; color: #666; margin-bottom: 12px; }
+    
+    .store-btn {
+      width: 100%; padding: 8px 0; border-radius: 4px;
+      border: none; font-size: 12px; font-weight: 600; cursor: pointer;
+      background: var(--accent); color: #fff; transition: background 0.2s;
+    }
+    .store-btn:hover { background: #005da0; }
+    .store-btn.installed { background: #e0e0e0; color: #555; cursor: default; }
+
+    .store-download-controls {
+      display: flex; gap: 6px; width: 100%; margin-top: 6px;
+    }
+    .ctrl-btn {
+      flex: 1; padding: 6px 0; border-radius: 4px; border: 1px solid #ccc;
+      background: #f3f3f3; color: #333; font-size: 11px; font-weight: 600;
+      cursor: pointer; transition: background 0.15s;
+    }
+    .ctrl-btn:hover { background: #e2e2e2; }
+    .ctrl-btn.cancel-btn { background: #fee2e2; color: #991b1b; border-color: #fca5a5; }
+    .ctrl-btn.cancel-btn:hover { background: #fca5a5; }
+
+    .progress-container {
+      width: 100%; height: 6px; background: #e0e0e0;
+      border-radius: 3px; overflow: hidden; margin-top: 8px; display: none;
+    }
+    .progress-bar {
+      height: 100%; background: var(--accent); width: 0%;
+      transition: width 0.1s;
+    }
+    .progress-text {
+      font-size: 10px; color: #666; margin-top: 4px; text-align: center; display: none;
+    }
+
+    #toast-container {
+      position: fixed; bottom: calc(var(--taskbar-h) + 12px); right: 12px;
+      display: flex; flex-direction: column; gap: 8px; z-index: 9999;
+      pointer-events: none;
+    }
+    .toast {
+      background: rgba(243, 243, 243, 0.95);
+      backdrop-filter: blur(20px); -webkit-backdrop-filter: blur(20px);
+      border: 1px solid rgba(0,0,0,0.1);
+      border-radius: 8px; padding: 12px 16px;
+      display: flex; align-items: center; gap: 12px;
+      box-shadow: 0 4px 16px rgba(0,0,0,0.15);
+      pointer-events: auto;
+      animation: slideIn 0.3s ease;
+      max-width: 320px;
+    }
+    @keyframes slideIn { from { transform: translateX(100%); opacity: 0; } to { transform: translateX(0); opacity: 1; } }
+    @keyframes fadeOut { to { opacity: 0; transform: translateY(10px); } }
+    .toast img { width: 24px; height: 24px; object-fit: contain; }
+    .toast-content { flex: 1; }
+    .toast-title { font-size: 12px; font-weight: 600; color: #000; }
+    .toast-msg { font-size: 11px; color: #555; }
+    .toast-close { background: transparent; border: none; cursor: pointer; color: #666; font-size: 12px; }
+
+    .weather-widget-window {
+      position: fixed; bottom: calc(var(--taskbar-h) + 8px); left: 8px;
+      width: 320px; height: 400px;
+      background: rgba(243, 243, 243, 0.95);
+      backdrop-filter: blur(20px); border-radius: 12px;
+      box-shadow: 0 10px 30px rgba(0,0,0,0.2); z-index: 400;
+      display: flex; flex-direction: column; overflow: hidden;
+      opacity: 0; pointer-events: none; transform: translateY(20px);
+      transition: opacity 0.2s ease, transform 0.2s ease;
+      border: 1px solid rgba(0,0,0,0.1);
+    }
+    .weather-widget-window.open { opacity: 1; pointer-events: auto; transform: translateY(0); }
+    .weather-widget-header {
+      display: flex; justify-content: space-between; align-items: center;
+      padding: 10px 14px; background: #f3f3f3; border-bottom: 1px solid #e0e0e0;
+      font-size: 13px; font-weight: 600;
+    }
+    .weather-widget-header i { cursor: pointer; font-size: 12px; padding: 4px; }
+    .weather-widget-header i:hover { background: rgba(0,0,0,0.08); border-radius: 4px; }
+    .weather-widget-body { flex: 1; background: #fff; }
+
+    #restart-screen, #shutdown-screen, #shutdown-anim-screen {
+      position: fixed; inset: 0; background: #000; z-index: 99999;
+      display: none; flex-direction: column; align-items: center; justify-content: center; color: #fff;
+    }
+
+    .app-list-item {
+      display: flex; align-items: center; justify-content: space-between;
+      padding: 12px 10px; border-bottom: 1px solid #eee;
+    }
+    .app-list-item img { width: 32px; height: 32px; margin-right: 12px; object-fit: contain; }
+    .app-info { flex: 1; display: flex; align-items: center; }
+    .uninstall-btn {
+      background: #ff4d4d; color: #fff; border: none; padding: 6px 12px;
+      border-radius: 4px; cursor: pointer; font-size: 12px; font-weight: 600;
+    }
+    .uninstall-btn:hover { background: #cc0000; }
+
+    .bg-selector { display: flex; gap: 12px; flex-wrap: wrap; margin-top: 10px; }
+    .bg-thumb {
+      width: 120px; height: 70px; border-radius: 6px; cursor: pointer;
+      border: 3px solid transparent; background-size: cover; background-position: center;
+      transition: transform 0.1s, border-color 0.1s;
+    }
+    .bg-thumb:hover { transform: scale(1.02); }
+    .bg-thumb.active { border-color: var(--accent); }
+
+    @media (max-width: 720px) {
+      :root { --taskbar-h: 44px; }
+      .start-apps { grid-template-columns: repeat(5, 1fr); }
+      .window { width: 96vw; height: 78vh; }
+      .explorer-nav { width: 140px; }
+      .weather-widget { left: 4px; gap: 4px; padding: 0 4px; }
+      .weather-widget img { width: 17px; height: 17px; }
+      .weather-temp { font-size: 10.5px; }
+      .weather-desc { display: none; }
+      .tray-item { padding: 0 3px; height: 28px; gap: 2px; }
+      .tray-item img { width: 13px; height: 13px; }
+      .lang-stacked { font-size: 8.5px; }
+      .tray-clock { padding: 0 6px; height: 32px; }
+      .tray-clock span { font-size: 9.5px; }
+      .store-grid { grid-template-columns: repeat(auto-fill, minmax(140px, 1fr)); }
+    }
+
+    @media (max-width: 480px) {
+      .start-apps { grid-template-columns: repeat(4, 1fr); }
+      .explorer-nav { display: none; }
+      .desktop-icon { width: 50px; padding: 4px 3px; }
+      .desktop-icon img { width: 28px; height: 28px; }
+      .desktop-icon span { font-size: 9px; }
+      .store-grid { grid-template-columns: repeat(auto-fill, minmax(120px, 1fr)); gap: 10px; }
+      .settings-sidebar { width: 160px; }
+    }
+
+    @media (pointer: coarse) {
+      .taskbar-icon { width: 34px; height: 34px; }
+      .taskbar-icon img { width: 20px; height: 20px; }
+      .taskbar-icon[data-app="start"] img { width: 22px; height: 22px; }
+      .tray-item { height: 28px; padding: 0 4px; }
+      .tray-item img { width: 13px; height: 13px; }
+      .tray-clock { height: 30px; padding: 0 6px; }
+      .tray-clock span { font-size: 9.5px; }
+      .lang-stacked { font-size: 9px; }
+    }
+
+    @media (orientation: landscape) and (max-height: 540px) {
+      :root { --taskbar-h: 38px; }
+      .weather-widget { left: 4px; gap: 4px; padding: 0 4px; }
+      .weather-widget img { width: 16px; height: 16px; }
+      .weather-temp { font-size: 10px; }
+      .weather-desc { font-size: 9px; }
+      .taskbar-icon { width: 30px; height: 30px; }
+      .taskbar-icon img { width: 17px; height: 17px; }
+      .taskbar-icon[data-app="start"] img { width: 19px; height: 19px; }
+      .tray-item { height: 26px; padding: 0 3px; }
+      .tray-item img { width: 12px; height: 12px; }
+      .lang-stacked { font-size: 8.5px; line-height: 1; }
+      .tray-clock { height: 28px; padding: 0 5px; }
+      .tray-clock span { font-size: 9px; line-height: 1.05; }
+      .start-menu { height: min(90vh, 340px); width: min(900px, 94vw); bottom: calc(var(--taskbar-h) + 4px); }
+      .start-header { padding: 7px 14px 3px; font-size: 12px; }
+      .start-apps { grid-template-columns: repeat(11, 1fr); padding: 0 6px 6px; gap: 0; }
+      .start-app-item { padding: 5px 1px; }
+      .start-app-item img { width: 18px; height: 18px; margin-bottom: 2px; }
+      .start-app-item span { font-size: 8.5px; }
+      .start-footer { padding: 6px 14px; }
+      .window { width: 96vw; height: 88vh; }
+      .window-header { height: 28px; padding-left: 8px; }
+      .window-title { font-size: 11px; gap: 5px; }
+      .window-title img { width: 13px; height: 13px; }
+      .win-btn { width: 36px; }
+      .window-body { padding: 8px; font-size: 12px; }
+      .tray-flyout { width: 200px; padding: 8px; bottom: calc(var(--taskbar-h) + 4px); right: 6px; }
+      .flyout-row { padding: 4px 0; font-size: 11px; }
+      .context-menu { min-width: 150px; padding: 4px; }
+      .context-item { padding: 6px 10px; font-size: 11.5px; }
+      .desktop-icon { width: 52px; padding: 4px 3px; }
+      .desktop-icon img { width: 30px; height: 30px; }
+      .desktop-icon span { font-size: 9px; }
+    }
+
+    @media (orientation: landscape) and (max-height: 400px) {
+      :root { --taskbar-h: 34px; }
+      .taskbar-icon { width: 28px; height: 28px; }
+      .taskbar-icon img { width: 15px; height: 15px; }
+      .taskbar-icon[data-app="start"] img { width: 17px; height: 17px; }
+      .tray-item { height: 24px; padding: 0 2px; }
+      .tray-item img { width: 11px; height: 11px; }
+      .tray-clock span { font-size: 8px; }
+      .lang-stacked { font-size: 7.5px; }
+      .start-apps { grid-template-columns: repeat(12, 1fr); }
+      .start-menu { height: min(90vh, 300px); }
+      .start-app-item img { width: 16px; height: 16px; }
+      .start-app-item span { font-size: 8.5px; }
+      .window-body { padding: 6px; font-size: 11px; }
+    }
+
+    @media (prefers-reduced-motion: reduce) {
+      * { transition-duration: 0.01ms !important; animation-duration: 0.01ms !important; }
+    }
+  </style>
+</head>
+<body>
+
+<div id="fs-hint">Tap anywhere to enter fullscreen</div>
+
+<div id="loading-screen">
+  <img src="https://img.icons8.com/color/48/windows-11.png" alt="Windows Logo" class="loading-logo">
+  <div class="spinner"></div>
+</div>
+
+<div id="blue-loader" style="display:none; position:fixed; top:50%; left:50%; transform:translate(-50%,-50%); z-index:9999;">
+  <div class="spinner" style="border-color: rgba(0,103,192,0.2); border-top-color: var(--accent); width:16px; height:16px; border-width:2px;"></div>
+</div>
+
+<div id="restart-screen">
+  <img src="https://img.icons8.com/color/48/windows-11.png" alt="Logo" style="width:60px; margin-bottom:20px;">
+  <div class="spinner" style="width:24px; height:24px; border-width:2px; margin-bottom:16px;"></div>
+  <div style="font-size:14px; font-weight:400;">Restarting...</div>
+</div>
+
+<div id="shutdown-anim-screen">
+  <img src="https://img.icons8.com/color/48/windows-11.png" alt="Logo" style="width:60px; margin-bottom:20px;">
+  <div class="spinner" style="width:24px; height:24px; border-width:2px; margin-bottom:16px;"></div>
+  <div style="font-size:14px; font-weight:400;">Shutting down...</div>
+</div>
+
+<div id="shutdown-screen">
+  <img src="https://i.ibb.co/yndw1ny4/plug.png" alt="plug" border="0" style="width:80px; height:auto; margin-bottom:12px;">
+  <div style="font-size:1px; line-height:1; color:#fff; margin-bottom:8px;">edt.im</div>
+  <div style="font-size:14px; font-weight:400; color:#fff;">Click Ctrl+F4 or Ctrl+W to plug off.</div>
+</div>
+
+<div id="toast-container"></div>
+
+<div class="desktop" id="desktop">
+  <div class="desktop-surface" id="desktopSurface">
+
+    <div class="desktop-icons-container">
+      <div class="desktop-icon" data-app="recyclebin">
+        <img src="https://img.icons8.com/color/48/recycle-bin.png" alt="Recycle Bin">
+        <span>Recycle Bin</span>
+      </div>
+      <div class="desktop-icon" data-app="edge">
+        <img src="https://raw.githubusercontent.com/notAperson535/Win11-HTML/c4289ccd494bea102381b6f0765c0d4fd802c9c3/img/edge.png" alt="Edge">
+        <span>Microsoft Edge</span>
+      </div>
+    </div>
+
+    <div id="windows-container"></div>
+
+    <div id="selection-box"></div>
+    <div class="context-menu" id="contextMenu"></div>
+  </div>
+
+  <div class="taskbar" id="taskbar">
+    <div class="weather-widget" onclick="openWeatherWidget()">
+      <img src="https://img.icons8.com/color/48/sun.png" alt="Weather">
+      <div class="weather-info">
+        <span class="weather-temp">32°C</span>
+        <span class="weather-desc">Sunny</span>
+      </div>
+    </div>
+
+    <div class="taskbar-center" id="taskbarCenter"></div>
+
+    <div class="taskbar-tray">
+      <div class="tray-item" data-tray="up" title="Show hidden icons">
+        <img src="https://img.icons8.com/metro/26/chevron-up.png" alt="chevron-up"/>
+      </div>
+      <div class="tray-item" data-tray="lang" title="Language">
+        <div class="lang-stacked">
+          <span>ENG</span>
+          <span>IN</span>
+        </div>
+      </div>
+      <div class="tray-item" data-tray="wifi" title="Wi-Fi">
+        <img src="https://img.icons8.com/metro/26/wifi.png" alt="wifi"/>
+      </div>
+      <div class="tray-item" data-tray="sound" title="Sound">
+        <img src="https://img.icons8.com/ios/50/room-sound.png" alt="room-sound"/>
+      </div>
+      <div class="tray-item" data-tray="battery" title="Battery">
+        <img src="https://img.icons8.com/ios-glyphs/30/full-battery.png" alt="full-battery"/>
+      </div>
+      <div class="tray-clock" data-tray="clock" title="Date and Time">
+        <span id="trayTime">--:--</span>
+        <span id="trayDate">--/--/----</span>
+      </div>
+    </div>
+  </div>
+</div>
+
+<div class="tray-flyout" id="trayFlyout">
+  <div class="flyout-title">
+    <span id="flyoutTitle">Settings</span>
+    <i class="fas fa-cog" style="cursor:pointer; opacity:0.6;" onclick="closeFlyout()"></i>
+  </div>
+  <div id="flyoutContent" style="display:flex; flex-direction:column; gap:4px;"></div>
+</div>
+
+<div class="start-menu" id="startMenu">
+  <div class="start-header">
+    <span>📌 Pinned</span>
+    <span class="all-apps-btn" id="allAppsBtn">All apps →</span>
+  </div>
+  <div class="start-apps" id="startApps"></div>
+  <div class="start-footer">
+    <div class="start-footer-user">
+      <i class="fas fa-user-circle"></i> KCNX Admin
+    </div>
+    <div class="start-footer-buttons">
+      <button id="btnShutdown" title="Shut down"><i class="fas fa-power-off"></i></button>
+      <button id="btnRestart" title="Restart"><i class="fas fa-redo"></i></button>
+    </div>
+  </div>
+</div>
+
+<div class="weather-widget-window" id="weatherWidgetWindow">
+  <div class="weather-widget-header">
+    <span>MSN Weather</span>
+    <i class="fas fa-times" onclick="closeWeatherWidget()"></i>
+  </div>
+  <div class="weather-widget-body">
+    <iframe src="about:blank" id="weatherIframe" style="width:100%;height:100%;border:none;" title="Weather"></iframe>
+  </div>
+</div>
+
+<script>
+/* FULLSCREEN CONTROLLER */
+function isFullscreen() {
+  return !!(document.fullscreenElement || document.webkitFullscreenElement || document.msFullscreenElement);
+}
+function hideFsHint() {
+  const h = document.getElementById('fs-hint');
+  if (h) h.classList.add('hide');
+}
+function lockLandscape() {
+  try {
+    if (screen.orientation && screen.orientation.lock) {
+      screen.orientation.lock('landscape').catch(() => {});
+    }
+  } catch (e) {}
+}
+
+const FS_MAX_ATTEMPTS = 6;
+let fsAttempts = 0;
+let fsSucceeded = false;
+
+function tryEnterFullscreen() {
+  if (isFullscreen()) { fsSucceeded = true; hideFsHint(); lockLandscape(); return true; }
+  if (fsAttempts >= FS_MAX_ATTEMPTS) { hideFsHint(); return false; }
+  fsAttempts++;
+  const el = document.documentElement;
+  const fn = el.requestFullscreen || el.webkitRequestFullscreen || el.msRequestFullscreen;
+  if (!fn) { hideFsHint(); return false; }
+  try {
+    const p = fn.call(el, { navigationUI: 'hide' });
+    if (p && typeof p.then === 'function') {
+      p.then(() => { fsSucceeded = true; hideFsHint(); lockLandscape(); }).catch(() => {});
+    } else {
+      fsSucceeded = true; hideFsHint(); lockLandscape();
+    }
+    return true;
+  } catch (e) { return false; }
+}
+
+const FS_EVENTS = ['pointerdown', 'touchstart', 'click', 'keydown'];
+function cleanupFsListeners() { FS_EVENTS.forEach(evt => document.removeEventListener(evt, onFsGesture, true)); }
+function onFsGesture() {
+  if (fsSucceeded || isFullscreen()) { cleanupFsListeners(); return; }
+  tryEnterFullscreen();
+  if (fsAttempts >= FS_MAX_ATTEMPTS || fsSucceeded) cleanupFsListeners();
+}
+FS_EVENTS.forEach(evt => document.addEventListener(evt, onFsGesture, { capture: true, passive: true }));
+
+document.addEventListener('fullscreenchange', () => {
+  if (isFullscreen()) { fsSucceeded = true; hideFsHint(); lockLandscape(); cleanupFsListeners(); }
+});
+document.addEventListener('webkitfullscreenchange', () => {
+  if (isFullscreen()) { fsSucceeded = true; hideFsHint(); cleanupFsListeners(); }
+});
+
+/* INDEXEDDB & STORAGE MANAGEMENT */
+let db;
+const dbRequest = indexedDB.open("index.db", 2);
+dbRequest.onupgradeneeded = (e) => {
+  db = e.target.result;
+  if (!db.objectStoreNames.contains('state')) db.createObjectStore('state');
+  if (!db.objectStoreNames.contains('installedApps')) db.createObjectStore('installedApps', { keyPath: 'id' });
+};
+dbRequest.onsuccess = (e) => { 
+  db = e.target.result; 
+  loadInstalledApps(() => {
+    buildUI();
+    renderStartMenu();
+    loadBackground();
+  });
+};
+
+/* LOCAL FILE STORAGE HELPER */
+function getStoredFiles() {
+  try {
+    return JSON.parse(localStorage.getItem('kcnx_files') || '[]');
+  } catch(e) { return []; }
+}
+function saveStoredFiles(files) {
+  localStorage.setItem('kcnx_files', JSON.stringify(files));
+}
+function getRecycleBinFiles() {
+  try {
+    return JSON.parse(localStorage.getItem('kcnx_recyclebin') || '[]');
+  } catch(e) { return []; }
+}
+function saveRecycleBinFiles(files) {
+  localStorage.setItem('kcnx_recyclebin', JSON.stringify(files));
+}
+
+/* BACKGROUND SETTINGS */
+const BG_OPTIONS = [
+  'https://raw.githubusercontent.com/notAperson535/Win11-HTML/c4289ccd494bea102381b6f0765c0d4fd802c9c3/img/backgroundlight.jpg',
+  'https://raw.githubusercontent.com/notAperson535/Win11-HTML/c4289ccd494bea102381b6f0765c0d4fd802c9c3/img/backgrounddark.jpg',
+  'https://images.unsplash.com/photo-1579546929518-9e396f3cc809?w=1920&q=80',
+  'https://images.unsplash.com/photo-1557682250-33bd709cbe85?w=1920&q=80'
+];
+
+function saveBackground(url) {
+  if (!db) return;
+  const tx = db.transaction('state', 'readwrite');
+  tx.objectStore('state').put(url, 'wallpaper');
+  document.getElementById('desktop').style.backgroundImage = `url('${url}')`;
+}
+
+function loadBackground() {
+  if (!db) return;
+  const tx = db.transaction('state', 'readonly');
+  const req = tx.objectStore('state').get('wallpaper');
+  req.onsuccess = () => {
+    if (req.result) {
+      document.getElementById('desktop').style.backgroundImage = `url('${req.result}')`;
+    }
+  };
+}
+
+/* APP CATALOG */
+const DEFAULT_INSTALLED = [
+  { id: 'edge', name: 'Microsoft Edge', size: 0, icon: 'https://raw.githubusercontent.com/notAperson535/Win11-HTML/c4289ccd494bea102381b6f0765c0d4fd802c9c3/img/edge.png', category: 'apps', url: 'https://kcnx5730.github.io/3.14159' },
+  { id: 'store', name: 'Microsoft Store', size: 0, icon: 'https://raw.githubusercontent.com/notAperson535/Win11-HTML/c4289ccd494bea102381b6f0765c0d4fd802c9c3/img/store.ico', category: 'apps' },
+  { id: 'explorer', name: 'File Explorer', size: 0, icon: 'https://raw.githubusercontent.com/notAperson535/Win11-HTML/c4289ccd494bea102381b6f0765c0d4fd802c9c3/img/explorer.png', category: 'apps' },
+  { id: 'settings', name: 'Settings', size: 0, icon: 'https://raw.githubusercontent.com/notAperson535/Win11-HTML/c4289ccd494bea102381b6f0765c0d4fd802c9c3/img/settings.ico', category: 'apps' },
+  { id: 'notepad', name: 'Notepad', size: 0, icon: 'https://raw.githubusercontent.com/notAperson535/Win11-HTML/c4289ccd494bea102381b6f0765c0d4fd802c9c3/img/notepad.ico', category: 'apps' },
+  { id: 'calculator', name: 'Calculator', size: 0, icon: 'https://raw.githubusercontent.com/notAperson535/Win11-HTML/c4289ccd494bea102381b6f0765c0d4fd802c9c3/img/calculator.ico', category: 'apps' },
+  { id: 'terminal', name: 'Terminal', size: 0, icon: 'https://raw.githubusercontent.com/notAperson535/Win11-HTML/c4289ccd494bea102381b6f0765c0d4fd802c9c3/img/terminal.ico', category: 'apps' },
+  { id: 'devcpp', name: 'Dev C++', size: 0, icon: 'https://files.catbox.moe/yzk8uh.ico', category: 'apps' },
+  { id: 'netflix', name: 'Netflix', size: 0, icon: 'https://img.icons8.com/color/48/netflix.png', category: 'apps' },
+  { id: 'recyclebin', name: 'Recycle Bin', size: 0, icon: 'https://img.icons8.com/color/48/recycle-bin.png', category: 'apps' }
+];
+
+const APP_CATALOG = [
+  { id: 'spotify', name: 'Spotify', size: 150, icon: 'https://img.icons8.com/color/48/spotify.png', category: 'apps', url: 'https://open.spotify.com' },
+  { id: 'discord', name: 'Discord', size: 120, icon: 'https://img.icons8.com/color/48/discord-logo.png', category: 'apps', url: 'https://discord.com' },
+  { id: 'whatsapp', name: 'WhatsApp', size: 180, icon: 'https://img.icons8.com/color/48/whatsapp.png', category: 'apps', url: 'https://web.whatsapp.com' },
+  { id: 'telegram', name: 'Telegram', size: 90, icon: 'https://img.icons8.com/color/48/telegram-app.png', category: 'apps', url: 'https://web.telegram.org' },
+  { id: 'zoom', name: 'Zoom', size: 250, icon: 'https://img.icons8.com/color/48/zoom.png', category: 'apps', url: 'https://zoom.us' },
+  { id: 'notion', name: 'Notion', size: 80, icon: 'https://img.icons8.com/color/48/notion.png', category: 'apps', url: 'https://notion.so' },
+  { id: 'photoshop', name: 'Photoshop', size: 2500, icon: 'https://img.icons8.com/color/48/adobe-photoshop.png', category: 'apps', url: 'https://photoshop.adobe.com' },
+  { id: 'minecraft', name: 'Minecraft', size: 800, icon: 'https://img.icons8.com/color/48/minecraft.png', category: 'gaming', url: 'https://quenq.com/apps/minecraft/', directOpen: true },
+  { id: 'gta3', name: 'GTA III', size: 3500, icon: 'https://i.ibb.co/tpn5GsJX/463-4630434-grand-theft-auto-iii-gta-3-folder-icon.png', category: 'gaming', url: 'https://quenq.com/apps/gta-3/', directOpen: true },
+  { id: 'gtavc', name: 'GTA Vice City Enhanced', size: 4200, icon: 'https://i.ibb.co/gFvwtCvW/images-4.jpg', category: 'gaming', url: 'https://quenq.com/apps/vice-city/#google_vignette', directOpen: true },
+  { id: 'youtube', name: 'YouTube', size: 150, icon: 'https://img.icons8.com/color/48/youtube-play.png', category: 'movies', url: 'https://youtube.com' }
+];
+
+let installedApps = [];
+let activeInstalls = {}; 
+
+function loadInstalledApps(callback) {
+  if (!db) { callback(); return; }
+  const tx = db.transaction('installedApps', 'readonly');
+  const store = tx.objectStore('installedApps');
+  const req = store.getAll();
+  req.onsuccess = () => {
+    installedApps = req.result;
+    if (installedApps.length === 0) {
+      const tx2 = db.transaction('installedApps', 'readwrite');
+      const store2 = tx2.objectStore('installedApps');
+      DEFAULT_INSTALLED.forEach(app => store2.put(app));
+      installedApps = [...DEFAULT_INSTALLED];
+    } else if (!installedApps.some(a => a.id === 'netflix')) {
+      const nf = DEFAULT_INSTALLED.find(a => a.id === 'netflix');
+      if (nf) { installedApps.push(nf); saveInstalledApp(nf); }
+    }
+    callback();
+  };
+}
+
+function saveInstalledApp(app) {
+  if (!db) return;
+  const tx = db.transaction('installedApps', 'readwrite');
+  tx.objectStore('installedApps').put(app);
+}
+
+function removeInstalledApp(id) {
+  if (!db) return;
+  const tx = db.transaction('installedApps', 'readwrite');
+  tx.objectStore('installedApps').delete(id);
+}
+
+const IMG = 'https://raw.githubusercontent.com/notAperson535/Win11-HTML/c4289ccd494bea102381b6f0765c0d4fd802c9c3/img';
+const ALL_APPS_MAP = {};
+DEFAULT_INSTALLED.forEach(a => ALL_APPS_MAP[a.id] = a);
+APP_CATALOG.forEach(a => ALL_APPS_MAP[a.id] = a);
+
+const PERMANENT_TASKBAR_KEYS = ['start', 'taskview', 'edge', 'store', 'explorer', 'devcpp', 'netflix'];
+
+function formatSize(mb) {
+  if (!mb || mb === 0) return 'System App';
+  if (mb < 1024) return mb + ' MB';
+  return (mb / 1024).toFixed(2) + ' GB';
+}
+
+/* UI BUILD */
+function buildUI() {
+  const TASKBAR_KEYS = [
+    { key: 'start',   img: 'https://img.icons8.com/color/48/windows-11.png',  label: 'Start' },
+    { key: 'taskview',img: `${IMG}/taskview.png`,     label: 'Task View' },
+    { key: 'edge',    img: `${IMG}/edge.png`,         label: 'Edge' },
+    { key: 'store',   img: `${IMG}/store.ico`,        label: 'Store' },
+    { key: 'explorer',img: `${IMG}/explorer.png`,     label: 'File Explorer' },
+    { key: 'devcpp',  img: 'https://files.catbox.moe/yzk8uh.ico', label: 'Dev C++' },
+    { key: 'netflix', img: 'https://img.icons8.com/color/48/netflix.png', label: 'Netflix' }
+  ];
+
+  let taskbarHTML = '';
+  TASKBAR_KEYS.forEach(item => {
+    taskbarHTML += `
+      <div class="taskbar-icon" data-app="${item.key}" title="${item.label}">
+        <img src="${item.img}" alt="${item.label}" draggable="false">
+      </div>`;
+  });
+  document.getElementById('taskbarCenter').innerHTML = taskbarHTML;
+}
+
+function ensureTaskbarIcon(key) {
+  const center = document.getElementById('taskbarCenter');
+  if (!center) return;
+  let existing = center.querySelector(`.taskbar-icon[data-app="${key}"]`);
+  if (existing) return;
+
+  const app = ALL_APPS_MAP[key];
+  if (!app) return;
+
+  let iconUrl = app.icon || `https://img.icons8.com/color/48/${key}.png`;
+  const iconDiv = document.createElement('div');
+  iconDiv.className = 'taskbar-icon';
+  iconDiv.dataset.app = key;
+  iconDiv.title = app.name;
+  iconDiv.dataset.temporary = 'true';
+  iconDiv.innerHTML = `<img src="${iconUrl}" alt="${app.name}" draggable="false" onerror="this.src='https://img.icons8.com/color/48/application.png'">`;
+
+  center.appendChild(iconDiv);
+}
+
+function removeTaskbarIcon(key) {
+  if (PERMANENT_TASKBAR_KEYS.includes(key)) return;
+  const center = document.getElementById('taskbarCenter');
+  if (!center) return;
+  const existing = center.querySelector(`.taskbar-icon[data-app="${key}"]`);
+  if (existing) existing.remove();
+}
+
+function renderStartMenu() {
+  const container = document.getElementById('startApps');
+  container.innerHTML = '';
+  
+  installedApps.sort((a, b) => a.name.localeCompare(b.name)).forEach(app => {
+    let iconUrl = app.icon || `https://img.icons8.com/color/48/${app.id}.png`;
+    if (app.id === 'devcpp') iconUrl = 'https://files.catbox.moe/yzk8uh.ico';
+    
+    container.innerHTML += `
+      <div class="start-app-item" data-app="${app.id}">
+        <img src="${iconUrl}" alt="${app.name}" draggable="false" onerror="this.src='https://img.icons8.com/color/48/application.png'">
+        <span>${app.name}</span>
+      </div>`;
+  });
+}
+
+function showToast(title, msg, icon) {
+  const container = document.getElementById('toast-container');
+  const toast = document.createElement('div');
+  toast.className = 'toast';
+  toast.innerHTML = `
+    <img src="${icon || 'https://img.icons8.com/color/48/windows-11.png'}" onerror="this.src='https://img.icons8.com/color/48/windows-11.png'">
+    <div class="toast-content">
+      <div class="toast-title">${title}</div>
+      <div class="toast-msg">${msg}</div>
+    </div>
+    <button class="toast-close" onclick="this.parentElement.remove()"><i class="fas fa-times"></i></button>
+  `;
+  container.appendChild(toast);
+  setTimeout(() => {
+    toast.style.animation = 'fadeOut 0.3s ease forwards';
+    setTimeout(() => toast.remove(), 300);
+  }, 4000);
+}
+
+/* WINDOW MANAGER (MULTI-WINDOW) */
+let openWindows = {}; 
+let topZIndex = 300;
+
+function focusWindow(key) {
+  const winObj = openWindows[key];
+  if (!winObj) return;
+  topZIndex++;
+  winObj.el.style.zIndex = topZIndex;
+  
+  if (winObj.el.classList.contains('open')) {
+    document.querySelectorAll('.taskbar-icon').forEach(el => {
+      if (el.dataset.app === key) el.classList.add('active-app');
+    });
+  }
+}
+
+function applyMaximizedState(winEl) {
+  winEl.style.top = '0';
+  winEl.style.left = '0';
+  winEl.style.right = '0';
+  winEl.style.bottom = 'var(--taskbar-h)';
+  winEl.style.width = 'auto';
+  winEl.style.height = 'auto';
+  winEl.style.transform = 'none';
+  winEl.style.borderRadius = '0';
+  winEl.style.border = 'none';
+}
+function applyRestoredState(winEl) {
+  winEl.style.top = '50%';
+  winEl.style.left = '50%';
+  winEl.style.right = '';
+  winEl.style.bottom = '';
+  winEl.style.width = '';
+  winEl.style.height = '';
+  winEl.style.transform = 'translate(-50%, -50%) scale(1)';
+  winEl.style.borderRadius = '';
+  winEl.style.border = '';
+}
+
+function openApp(key) {
+  const app = ALL_APPS_MAP[key];
+  if (!app) return;
+
+  ensureTaskbarIcon(key);
+
+  if (app.directOpen && app.url) {
+    try {
+      const newWin = window.open(app.url, '_blank');
+      if (newWin) {
+        document.getElementById('startMenu').classList.remove('open');
+        closeFlyout();
+        return;
+      }
+    } catch(e) {}
+  }
+
+  if (openWindows[key]) {
+    const winObj = openWindows[key];
+    if (!winObj.el.classList.contains('open')) {
+      winObj.el.classList.add('open');
+    }
+    focusWindow(key);
+    document.getElementById('startMenu').classList.remove('open');
+    closeFlyout();
+    return;
+  }
+
+  const container = document.getElementById('windows-container');
+  const winEl = document.createElement('div');
+  winEl.className = 'window';
+  winEl.id = `window-${key}`;
+  
+  winEl.innerHTML = `
+    <div class="window-header" id="windowHeader-${key}">
+      <div class="window-title">
+        <img src="${app.icon || `https://img.icons8.com/color/48/${key}.png`}" alt="">
+        <span>${app.name}</span>
+      </div>
+      <div class="window-controls">
+        <div class="win-btn win-minimize"><i class="fas fa-minus"></i></div>
+        <div class="win-btn win-maximize"><img src="https://img.icons8.com/windows/32/maximize-button.png" alt="max"></div>
+        <div class="win-btn close win-close"><i class="fas fa-xmark"></i></div>
+      </div>
+    </div>
+    <div class="window-body" id="windowBody-${key}"></div>
+  `;
+
+  container.appendChild(winEl);
+  
+  const winObj = {
+    el: winEl,
+    isMaximized: false,
+    key: key
+  };
+  openWindows[key] = winObj;
+
+  const winBody = winEl.querySelector(`#windowBody-${key}`);
+  winEl.addEventListener('pointerdown', () => focusWindow(key));
+
+  winEl.querySelector('.win-close').addEventListener('click', (e) => {
+    e.stopPropagation();
+    closeApp(key);
+  });
+  winEl.querySelector('.win-minimize').addEventListener('click', (e) => {
+    e.stopPropagation();
+    minimizeApp(key);
+  });
+  winEl.querySelector('.win-maximize').addEventListener('click', (e) => {
+    e.stopPropagation();
+    winObj.isMaximized = !winObj.isMaximized;
+    if (winObj.isMaximized) applyMaximizedState(winEl);
+    else applyRestoredState(winEl);
+  });
+
+  initWindowDrag(winEl, winEl.querySelector(`#windowHeader-${key}`), winObj);
+
+  if (key === 'explorer' || key === 'recyclebin') {
+    renderExplorer(winBody, key === 'recyclebin' ? 'Recycle Bin' : 'Desktop');
+  } else if (key === 'store') {
+    renderStore(winBody, 'home');
+  } else if (key === 'terminal') {
+    winBody.innerHTML = `
+      <div class="terminal-body" id="terminalBody-${key}">
+        <div class="terminal-line">Microsoft Windows [Version 10.0.22631.3155]</div>
+        <div class="terminal-line">(c) Microsoft Corporation. All rights reserved.</div>
+        <div class="terminal-line">&nbsp;</div>
+        <div class="terminal-input-line">
+          <span class="terminal-prompt">PS C:\\Users\\KCNX&gt;</span>
+          <input type="text" id="terminalInput-${key}" autocomplete="off" spellcheck="false">
+        </div>
+      </div>`;
+    setTimeout(() => initTerminal(key), 60);
+  } else if (key === 'notepad') {
+    winBody.innerHTML = `
+      <div style="display:flex;flex-direction:column;height:100%;">
+        <div class="notepad-menubar">
+          <span>File</span><span>Edit</span><span>View</span><span>Help</span>
+        </div>
+        <textarea class="notepad-textarea" placeholder="Type something..."></textarea>
+      </div>`;
+  } else if (key === 'settings') {
+    winBody.style.padding = '0';
+    winBody.style.overflow = 'hidden';
+    renderSettingsView(winBody, 'system');
+  } else if (key === 'calculator') {
+    winBody.innerHTML = `
+      <div style="max-width:280px;margin:0 auto;">
+        <div class="calc-display">0</div>
+        <div class="calc-grid">
+          ${['C','±','%','÷','7','8','9','×','4','5','6','−','1','2','3','+','0','.','='].map(k => `
+            <button class="calc-btn ${k==='='?'accent':''}" ${k==='='?'style="grid-column:span 2;"':''}>${k}</button>
+          `).join('')}
+        </div>
+      </div>`;
+  } else if (key === 'edge') {
+    winBody.style.padding = '0';
+    winBody.style.overflow = 'hidden';
+    winBody.style.position = 'relative';
+    winBody.innerHTML = `
+      <iframe src="https://kcnx5730.github.io/3.14159" title="Microsoft Edge" style="position:absolute;inset:0;width:100%;height:100%;border:none;background:#fff;display:block;" allow="clipboard-read; clipboard-write; fullscreen; autoplay"></iframe>`;
+  } else if (key === 'devcpp') {
+    winBody.style.padding = '0';
+    winBody.style.overflow = 'hidden';
+    winBody.style.position = 'relative';
+    winBody.innerHTML = `
+      <iframe src="https://kcnx5730.github.io/Integrated-Development-Environment/" title="Dev C++" style="position:absolute;inset:0;width:100%;height:100%;border:none;background:#fff;display:block;" allow="clipboard-read; clipboard-write; fullscreen; autoplay"></iframe>`;
+  } else if (key === 'netflix') {
+    winBody.style.padding = '0';
+    winBody.style.overflow = 'hidden';
+    winBody.style.position = 'relative';
+    renderNetflix(winBody);
+  } else {
+    const url = app.url || 'https://example.com';
+    winBody.style.padding = '0';
+    winBody.style.overflow = 'hidden';
+    winBody.style.position = 'relative';
+    winBody.innerHTML = `
+      <iframe src="${url}" title="${app.name}" style="position:absolute;inset:0;width:100%;height:100%;border:none;background:#fff;display:block;" allow="clipboard-read; clipboard-write; fullscreen; autoplay"></iframe>`;
+  }
+
+  setTimeout(() => { winEl.classList.add('open'); }, 10);
+  focusWindow(key);
+
+  if (key === 'netflix') {
+    winObj.isMaximized = true;
+    applyMaximizedState(winEl);
+  }
+
+  document.getElementById('startMenu').classList.remove('open');
+  closeFlyout();
+}
+
+function minimizeApp(key) {
+  const winObj = openWindows[key];
+  if (winObj) {
+    winObj.el.classList.remove('open');
+    const tbIcon = document.querySelector(`.taskbar-icon[data-app="${key}"]`);
+    if (tbIcon) tbIcon.classList.remove('active-app');
+  }
+}
+
+function closeApp(key) {
+  const winObj = openWindows[key];
+  if (winObj) {
+    winObj.el.classList.remove('open');
+    setTimeout(() => {
+      winObj.el.remove();
+      delete openWindows[key];
+      removeTaskbarIcon(key);
+    }, 200);
+    const tbIcon = document.querySelector(`.taskbar-icon[data-app="${key}"]`);
+    if (tbIcon) tbIcon.classList.remove('active-app');
+  }
+}
+
+function initWindowDrag(winEl, header, winObj) {
+  let isDragging = false, offsetX = 0, offsetY = 0;
+
+  function startDrag(e) {
+    if (e.target.closest('.win-btn')) return;
+    if (winObj.isMaximized) return;
+    isDragging = true;
+    const rect = winEl.getBoundingClientRect();
+    const cx = e.touches ? e.touches[0].clientX : e.clientX;
+    const cy = e.touches ? e.touches[0].clientY : e.clientY;
+    offsetX = cx - rect.left;
+    offsetY = cy - rect.top;
+    winEl.style.transition = 'none';
+    winEl.style.transform = 'none';
+    winEl.style.left = rect.left + 'px';
+    winEl.style.top = rect.top + 'px';
+  }
+  function moveDrag(e) {
+    if (!isDragging) return;
+    e.preventDefault();
+    const cx = e.touches ? e.touches[0].clientX : e.clientX;
+    const cy = e.touches ? e.touches[0].clientY : e.clientY;
+    let newX = cx - offsetX, newY = cy - offsetY;
+    newX = Math.max(0, Math.min(window.innerWidth - winEl.offsetWidth, newX));
+    newY = Math.max(0, Math.min(window.innerHeight - winEl.offsetHeight - 56, newY));
+    winEl.style.left = newX + 'px';
+    winEl.style.top = newY + 'px';
+  }
+  function endDrag() {
+    if (!isDragging) return;
+    isDragging = false;
+    winEl.style.transition = '';
+  }
+  header.addEventListener('mousedown', startDrag);
+  document.addEventListener('mousemove', moveDrag);
+  document.addEventListener('mouseup', endDrag);
+  header.addEventListener('touchstart', startDrag, { passive: false });
+  document.addEventListener('touchmove', moveDrag, { passive: false });
+  document.addEventListener('touchend', endDrag);
+}
+
+/* FILE EXPLORER WITH INSERT & RECYCLE BIN MANAGEMENT */
+function renderExplorer(winBody, currentFolder = 'Desktop') {
+  const navItems = [
+    { name: 'Desktop', icon: 'fas fa-desktop' },
+    { name: 'Downloads', icon: 'fas fa-download' },
+    { name: 'Documents', icon: 'fas fa-file-lines' },
+    { name: 'Pictures', icon: 'fas fa-image' },
+    { name: 'Music', icon: 'fas fa-music' },
+    { name: 'Videos', icon: 'fas fa-video' },
+    { name: 'Local Disk (C:)', icon: 'fas fa-hard-drive' },
+    { name: 'Insert', icon: 'fas fa-file-import', isInsert: true },
+    { name: 'Recycle Bin', icon: 'fas fa-trash' }
+  ];
+
+  let navHtml = `<div class="explorer-nav">`;
+  navItems.forEach(item => {
+    if (item.isInsert) {
+      navHtml += `
+        <label class="explorer-nav-item" style="cursor:pointer;">
+          <i class="${item.icon}" style="color:var(--accent);"></i> ${item.name}
+          <input type="file" id="explorerFileInput" style="display:none;" onchange="handleFileUpload(event, '${currentFolder}')">
+        </label>`;
+    } else {
+      navHtml += `
+        <div class="explorer-nav-item ${currentFolder === item.name ? 'active' : ''}" onclick="switchExplorerFolder(this, '${item.name}')">
+          <i class="${item.icon}"></i> ${item.name}
+        </div>`;
+    }
+  });
+  navHtml += `</div>`;
+
+  let toolbarHtml = '';
+  if (currentFolder === 'Recycle Bin') {
+    toolbarHtml = `
+      <div class="explorer-toolbar">
+        <button class="explorer-btn" onclick="emptyRecycleBin()"><i class="fas fa-dumpster"></i> Empty Recycle Bin</button>
+      </div>`;
+  }
+
+  let contentHtml = `<div class="explorer-content">${toolbarHtml}`;
+
+  if (currentFolder === 'Local Disk (C:)') {
+    contentHtml += `
+      <h4 style="margin-bottom:12px; font-size:12px; font-weight:600; color:#555;">Devices and drives (1)</h4>
+      <div class="drive-container">
+        <img src="${IMG}/thispc.png" width="34" style="object-fit:contain;">
+        <div class="drive-info">
+          <div class="drive-name">KCNX MAINS (C:)</div>
+          <div class="drive-bar-bg"><div class="drive-bar-fill"></div></div>
+          <div class="drive-subtext">2.3GB of 5GB</div>
+        </div>
+      </div>`;
+  } else if (currentFolder === 'Recycle Bin') {
+    const binFiles = getRecycleBinFiles();
+    if (binFiles.length === 0) {
+      contentHtml += `<div style="padding:20px; text-align:center; color:#888;">Recycle Bin is empty.</div>`;
+    } else {
+      contentHtml += `<div class="explorer-grid">`;
+      binFiles.forEach((file, idx) => {
+        contentHtml += `
+          <div class="explorer-folder" title="${file.name}">
+            <img src="${getFileIcon(file.name)}" alt="">
+            <span>${file.name}</span>
+            <button class="explorer-btn" style="font-size:9px; padding:2px 4px; margin-top:4px;" onclick="restoreFile(${idx})">Restore</button>
+          </div>`;
+      });
+      contentHtml += `</div>`;
+    }
+  } else {
+    const allFiles = getStoredFiles();
+    const folderFiles = allFiles.filter(f => f.folder === currentFolder);
+
+    contentHtml += `<div class="explorer-grid">`;
+    if (currentFolder === 'Desktop') {
+      contentHtml += `
+        <div class="explorer-folder"><img src="${IMG}/explorer/documents.png" onerror="this.src='${IMG}/explorer.png'"><span>Documents</span></div>
+        <div class="explorer-folder"><img src="${IMG}/explorer/downloads.png" onerror="this.src='${IMG}/explorer.png'"><span>Downloads</span></div>
+        <div class="explorer-folder"><img src="${IMG}/explorer/music.png" onerror="this.src='${IMG}/explorer.png'"><span>Music</span></div>
+        <div class="explorer-folder"><img src="${IMG}/explorer/pictures.png" onerror="this.src='${IMG}/explorer.png'"><span>Pictures</span></div>
+        <div class="explorer-folder"><img src="${IMG}/explorer/videos.png" onerror="this.src='${IMG}/explorer.png'"><span>Videos</span></div>
+      `;
+    }
+
+    folderFiles.forEach((file, idx) => {
+      contentHtml += `
+        <div class="explorer-folder" title="${file.name}">
+          <img src="${getFileIcon(file.name)}" alt="">
+          <span>${file.name}</span>
+          <button class="explorer-btn" style="font-size:9px; padding:2px 4px; margin-top:4px; color:#d9534f;" onclick="deleteFile('${file.id}')">Delete</button>
+        </div>`;
+    });
+    contentHtml += `</div>`;
+  }
+
+  contentHtml += `</div>`;
+
+  winBody.innerHTML = `<div class="explorer-layout">${navHtml}${contentHtml}</div>`;
+}
+
+function getFileIcon(filename) {
+  const ext = filename.split('.').pop().toLowerCase();
+  if (['png','jpg','jpeg','gif','webp','svg'].includes(ext)) return `${IMG}/explorer/pictures.png`;
+  if (['mp4','mkv','webm','avi'].includes(ext)) return `${IMG}/explorer/videos.png`;
+  if (['mp3','wav','ogg'].includes(ext)) return `${IMG}/explorer/music.png`;
+  if (['pdf','doc','docx','txt'].includes(ext)) return `${IMG}/explorer/documents.png`;
+  return `${IMG}/explorer.png`;
+}
+
+function getTargetFolderByExtension(filename) {
+  const ext = filename.split('.').pop().toLowerCase();
+  if (['png','jpg','jpeg','gif','webp','svg'].includes(ext)) return 'Pictures';
+  if (['mp4','mkv','webm','avi'].includes(ext)) return 'Videos';
+  if (['mp3','wav','ogg'].includes(ext)) return 'Music';
+  if (['pdf','doc','docx','txt'].includes(ext)) return 'Documents';
+  return 'Downloads';
+}
+
+function handleFileUpload(e, currentFolder) {
+  const file = e.target.files[0];
+  if (!file) return;
+
+  const targetFolder = getTargetFolderByExtension(file.name);
+  const newFile = {
+    id: Date.now().toString(),
+    name: file.name,
+    folder: targetFolder,
+    size: file.size,
+    date: new Date().toLocaleDateString()
+  };
+
+  const files = getStoredFiles();
+  files.push(newFile);
+  saveStoredFiles(files);
+
+  showToast('File Uploaded', `${file.name} processing complete → Routed to ${targetFolder}`, getFileIcon(file.name));
+
+  const winBody = e.target.closest('.window-body');
+  if (winBody) renderExplorer(winBody, currentFolder);
+}
+
+function switchExplorerFolder(btn, folderName) {
+  const winBody = btn.closest('.window-body');
+  if (winBody) renderExplorer(winBody, folderName);
+}
+
+function deleteFile(fileId) {
+  let files = getStoredFiles();
+  const fileToDelete = files.find(f => f.id === fileId);
+  if (!fileToDelete) return;
+
+  files = files.filter(f => f.id !== fileId);
+  saveStoredFiles(files);
+
+  const bin = getRecycleBinFiles();
+  bin.push(fileToDelete);
+  saveRecycleBinFiles(bin);
+
+  showToast('Moved to Recycle Bin', `${fileToDelete.name} was sent to Recycle Bin.`, 'https://img.icons8.com/color/48/recycle-bin.png');
+
+  const activeWin = openWindows['explorer'] || openWindows['recyclebin'];
+  if (activeWin) {
+    const winBody = activeWin.el.querySelector('.window-body');
+    renderExplorer(winBody, fileToDelete.folder);
+  }
+}
+
+function restoreFile(binIdx) {
+  let bin = getRecycleBinFiles();
+  const file = bin[binIdx];
+  if (!file) return;
+
+  bin.splice(binIdx, 1);
+  saveRecycleBinFiles(bin);
+
+  const files = getStoredFiles();
+  files.push(file);
+  saveStoredFiles(files);
+
+  showToast('File Restored', `${file.name} restored to ${file.folder}.`, getFileIcon(file.name));
+
+  const activeWin = openWindows['recyclebin'];
+  if (activeWin) {
+    const winBody = activeWin.el.querySelector('.window-body');
+    renderExplorer(winBody, 'Recycle Bin');
+  }
+}
+
+function emptyRecycleBin() {
+  saveRecycleBinFiles([]);
+  showToast('Recycle Bin Emptied', 'All items deleted permanently.', 'https://img.icons8.com/color/48/recycle-bin.png');
+
+  const activeWin = openWindows['recyclebin'];
+  if (activeWin) {
+    const winBody = activeWin.el.querySelector('.window-body');
+    renderExplorer(winBody, 'Recycle Bin');
+  }
+}
+
+/* TERMINAL CLI EXECUTION */
+function initTerminal(key) {
+  const input = document.getElementById(`terminalInput-${key}`);
+  const body = document.getElementById(`terminalBody-${key}`);
+  if (!input || !body) return;
+  input.focus();
+
+  input.addEventListener('keydown', (e) => {
+    if (e.key === 'Enter') {
+      const fullCmd = input.value.trim();
+      const cmdParts = fullCmd.split(' ');
+      const mainCmd = cmdParts[0].toLowerCase();
+
+      const line = document.createElement('div');
+      line.className = 'terminal-line';
+      line.innerHTML = `<span class="terminal-prompt">PS C:\\Users\\KCNX&gt;</span> ${fullCmd}`;
+      body.insertBefore(line, body.lastElementChild);
+
+      const resp = document.createElement('div');
+      resp.className = 'terminal-line';
+
+      switch (mainCmd) {
+        case 'dir':
+          const files = getStoredFiles();
+          let dirText = '  Directory: C:\\Users\\KCNX\n\nMode          LastWriteTime         Length Name\n----          -------------         ------ ----\n';
+          dirText += 'd-----       ' + new Date().toLocaleDateString() + '               Desktop\n';
+          dirText += 'd-----       ' + new Date().toLocaleDateString() + '               Documents\n';
+          dirText += 'd-----       ' + new Date().toLocaleDateString() + '               Downloads\n';
+          files.forEach(f => {
+            dirText += `-a----       ${f.date}               ${f.size || 1024} ${f.name}\n`;
+          });
+          resp.textContent = dirText;
+          break;
+        case 'cls':
+          body.querySelectorAll('.terminal-line').forEach((l, idx) => { if (idx > 2) l.remove(); });
+          resp.textContent = '';
+          break;
+        case 'echo':
+          resp.textContent = cmdParts.slice(1).join(' ');
+          break;
+        case 'ver':
+          resp.textContent = '\nMicrosoft Windows [Version 10.0.22631.3155]';
+          break;
+        case 'systeminfo':
+          resp.textContent = 'OS Name:                   Microsoft Windows 11 Pro\nOS Version:                10.0.22631 N/A Build 22631\nSystem Manufacturer:       KCNX Client Systems\nSystem Model:              Zebronics ZEB-H110M2\nProcessor:                 Intel(R) Core(TM) i7-6700 CPU @ 3.40GHz\nTotal Physical Memory:     8,192 MB';
+          break;
+        case 'ipconfig':
+          resp.textContent = '\nWindows IP Configuration\n\nEthernet adapter Ethernet:\n   Connection-specific DNS Suffix  . : localdomain\n   IPv4 Address. . . . . . . . . . . : 192.168.1.105\n   Subnet Mask . . . . . . . . . . . : 255.255.255.0\n   Default Gateway . . . . . . . . . : 192.168.1.1';
+          break;
+        case 'date':
+          resp.textContent = `The current date is: ${new Date().toLocaleDateString()}`;
+          break;
+        case 'time':
+          resp.textContent = `The current time is: ${new Date().toLocaleTimeString()}`;
+          break;
+        case 'help':
+          resp.textContent = 'Supported commands: dir, cls, echo, ver, systeminfo, ipconfig, date, time, help, exit';
+          break;
+        case 'exit':
+          closeApp(key);
+          return;
+        default:
+          if (mainCmd !== '') {
+            resp.textContent = `'${mainCmd}' is not recognized as an internal or external command.`;
+          }
+      }
+
+      if (resp.textContent) body.insertBefore(resp, body.lastElementChild);
+      input.value = '';
+      body.scrollTop = body.scrollHeight;
+    }
+  });
+}
+
+/* SETTINGS VIEW */
+function renderSettingsView(winBody, category) {
+  const sidebar = `
+    <div class="settings-sidebar">
+      <div style="display: flex; align-items: center; gap: 8px; padding: 8px 10px; margin-bottom: 10px;">
+        <i class="fas fa-cog" style="color: #0067c0; font-size: 18px;"></i>
+        <span style="font-weight: 600; font-size: 14px;">Settings</span>
+      </div>
+      <div class="settings-nav-item ${category === 'system' ? 'active' : ''}" onclick="renderSettingsView(this.closest('.window-body'), 'system')"><i class="fas fa-desktop"></i> System</div>
+      <div class="settings-nav-item ${category === 'network' ? 'active' : ''}" onclick="renderSettingsView(this.closest('.window-body'), 'network')"><i class="fas fa-wifi"></i> Network & Internet</div>
+      <div class="settings-nav-item ${category === 'apps' ? 'active' : ''}" onclick="renderSettingsView(this.closest('.window-body'), 'apps')"><i class="fas fa-th-large"></i> Apps</div>
+      <div class="settings-nav-item ${category === 'update' ? 'active' : ''}" onclick="renderSettingsView(this.closest('.window-body'), 'update')"><i class="fas fa-sync"></i> Windows Update</div>
+    </div>
+  `;
+
+  let content = '';
+
+  if (category === 'system') {
+    content = `
+      <h2 style="font-size: 22px; margin-bottom: 20px; color: #333;">System</h2>
+      <div style="background: #f9f9f9; padding: 16px; border-radius: 8px; margin-bottom: 16px; border: 1px solid #eee;">
+        <h3 style="font-size: 15px; margin-bottom: 12px; color: #333;">Background</h3>
+        <p style="font-size: 12px; color: #666; margin-bottom: 10px;">Select a background image to apply</p>
+        <div class="bg-selector">
+          ${BG_OPTIONS.map((url) => `
+            <div class="bg-thumb" style="background-image: url('${url}');" onclick="saveBackground('${url}'); document.querySelectorAll('.bg-thumb').forEach(t=>t.classList.remove('active')); this.classList.add('active');"></div>
+          `).join('')}
+        </div>
+      </div>`;
+  } else if (category === 'network') {
+    content = `
+      <h2 style="font-size: 22px; margin-bottom: 20px; color: #333;">Network & Internet</h2>
+      <div style="background: #f9f9f9; padding: 16px; border-radius: 8px; border: 1px solid #eee;">
+        <div style="display:flex; align-items:center; gap:12px; margin-bottom:12px;">
+          <i class="fas fa-wifi" style="font-size:24px; color:var(--accent);"></i>
+          <div>
+            <div style="font-weight:600; font-size:14px;">Wi-Fi Status</div>
+            <div style="font-size:12px; color:#10b981;">Connected to KCNX_HighSpeed_5G</div>
+          </div>
+        </div>
+      </div>`;
+  } else if (category === 'apps') {
+    const appsToShow = installedApps.filter(a => a.size > 0);
+    content = `
+      <h2 style="font-size: 22px; margin-bottom: 20px; color: #333;">Apps & features</h2>
+      <div style="background: #fff; border: 1px solid #eee; border-radius: 8px; overflow: hidden;">
+        ${appsToShow.length === 0 ? '<div style="padding: 20px; text-align: center; color: #888;">No user-installed apps to show.</div>' : ''}
+        ${appsToShow.map(app => `
+          <div class="app-list-item">
+            <div class="app-info">
+              <img src="${app.icon}" onerror="this.src='https://img.icons8.com/color/48/application.png'">
+              <div>
+                <div style="font-size: 14px; font-weight: 600; color: #000;">${app.name}</div>
+                <div style="font-size: 11px; color: #888;">${formatSize(app.size)}</div>
+              </div>
+            </div>
+            <button class="uninstall-btn" onclick="uninstallApp('${app.id}')">Uninstall</button>
+          </div>
+        `).join('')}
+      </div>`;
+  } else {
+    content = `
+      <h2 style="font-size: 22px; margin-bottom: 20px; color: #333;">Windows Update</h2>
+      <div style="background: #f9f9f9; padding: 20px; border-radius: 8px; border: 1px solid #eee; text-align: center;">
+        <i class="fas fa-check-circle" style="font-size: 40px; color: #10b981; margin-bottom: 12px;"></i>
+        <h3 style="font-size: 16px; margin-bottom: 8px; color: #333;">You're up to date</h3>
+      </div>`;
+  }
+
+  winBody.innerHTML = `
+    <div style="display: flex; height: 100%; font-family: 'Segoe UI', sans-serif; background: #fce4ec;">
+      ${sidebar}
+      <div style="flex: 1; padding: 24px; overflow-y: auto; background: #fff; border-radius: 8px 0 0 8px; margin: 10px 10px 10px 0;">
+        ${content}
+      </div>
+    </div>
+  `;
+}
+
+/* STORE LOGIC */
+function renderStore(winBody, category = 'home') {
+  winBody.style.padding = '0';
+  winBody.style.overflow = 'hidden';
+  
+  let sidebarHtml = `
+    <div class="store-sidebar">
+      <div class="store-nav-btn ${category === 'home' ? 'active' : ''}" onclick="renderStore(this.closest('.window-body'), 'home')" title="Home"><i class="fas fa-home"></i></div>
+      <div class="store-nav-btn ${category === 'apps' ? 'active' : ''}" onclick="renderStore(this.closest('.window-body'), 'apps')" title="Apps"><i class="fas fa-th-large"></i></div>
+      <div class="store-nav-btn ${category === 'gaming' ? 'active' : ''}" onclick="renderStore(this.closest('.window-body'), 'gaming')" title="Gaming"><i class="fas fa-gamepad"></i></div>
+      <div class="store-nav-btn ${category === 'movies' ? 'active' : ''}" onclick="renderStore(this.closest('.window-body'), 'movies')" title="Movies & TV"><i class="fas fa-film"></i></div>
+      <div class="store-nav-btn ${category === 'library' ? 'active' : ''}" onclick="renderStore(this.closest('.window-body'), 'library')" title="Library"><i class="fas fa-book"></i></div>
+    </div>
+  `;
+
+  let contentHtml = '';
+  
+  if (category === 'library') {
+    contentHtml = `<div class="store-title">Library</div><div class="store-grid">`;
+    installedApps.filter(a => a.size > 0).forEach(app => {
+      contentHtml += createStoreCard(app, true);
+    });
+    contentHtml += `</div>`;
+  } else {
+    let filteredApps = APP_CATALOG;
+    if (category !== 'home') {
+      filteredApps = APP_CATALOG.filter(a => a.category === category);
+    } else {
+      filteredApps = APP_CATALOG.slice(0, 12); 
+    }
+    
+    const title = category === 'home' ? 'Top Free Apps' : category === 'apps' ? 'Apps' : category === 'gaming' ? 'Gaming' : 'Movies & TV';
+    contentHtml = `<div class="store-title">${title}</div><div class="store-grid">`;
+    filteredApps.forEach(app => {
+      contentHtml += createStoreCard(app, false);
+    });
+    contentHtml += `</div>`;
+  }
+
+  winBody.innerHTML = `
+    <div class="store-layout">
+      ${sidebarHtml}
+      <div class="store-content">
+        ${contentHtml}
+      </div>
+    </div>
+  `;
+}
+
+function createStoreCard(app, isLibrary) {
+  const isInstalled = installedApps.some(a => a.id === app.id);
+  const installData = activeInstalls[app.id];
+  
+  let btnHtml = '';
+  if (installData) {
+    const isPaused = installData.paused;
+    const downloaded = installData.downloaded || 0;
+    const percent = Math.min(100, (downloaded / app.size) * 100);
+
+    btnHtml = `
+      <button class="store-btn installing" id="btn-${app.id}" disabled>${isPaused ? 'Paused' : 'Downloading...'}</button>
+      <div class="progress-container" id="prog-cont-${app.id}" style="display:block;">
+        <div class="progress-bar" id="prog-${app.id}" style="width: ${percent}%;"></div>
+      </div>
+      <div class="progress-text" id="prog-text-${app.id}" style="display:block;">
+        ${Math.round(downloaded)} MB / ${formatSize(app.size)}
+      </div>
+      <div class="store-download-controls">
+        <button class="ctrl-btn" id="pause-btn-${app.id}" onclick="togglePauseInstall('${app.id}')">${isPaused ? 'Resume' : 'Pause'}</button>
+        <button class="ctrl-btn cancel-btn" onclick="cancelInstall('${app.id}')">Cancel</button>
+      </div>
+    `;
+  } else if (isInstalled) {
+    btnHtml = `<button class="store-btn installed" onclick="openApp('${app.id}')">Open</button>`;
+    if (isLibrary) {
+      btnHtml += `<button class="uninstall-btn" style="margin-top:8px; width:100%;" onclick="uninstallApp('${app.id}')">Uninstall</button>`;
+    }
+  } else {
+    btnHtml = `<button class="store-btn" id="btn-${app.id}" onclick="startInstall('${app.id}')">Install</button>
+               <div class="progress-container" id="prog-cont-${app.id}"><div class="progress-bar" id="prog-${app.id}"></div></div>
+               <div class="progress-text" id="prog-text-${app.id}">0 MB / ${formatSize(app.size)}</div>`;
+  }
+
+  return `
+    <div class="store-card" id="card-${app.id}">
+      <img src="${app.icon}" alt="${app.name}" onerror="this.src='https://img.icons8.com/color/48/application.png'">
+      <div class="title">${app.name}</div>
+      <div class="size">${formatSize(app.size)}</div>
+      ${btnHtml}
+    </div>
+  `;
+}
+
+function startInstall(appId) {
+  if (activeInstalls[appId]) return;
+  const app = APP_CATALOG.find(a => a.id === appId);
+  if (!app) return;
+
+  activeInstalls[appId] = { downloaded: 0, paused: false, timer: null };
+  runInstallLoop(appId);
+
+  const activeStoreWin = openWindows['store'];
+  if (activeStoreWin) {
+    renderStore(activeStoreWin.el.querySelector('.window-body'), 'home');
+  }
+}
+
+function runInstallLoop(appId) {
+  const app = APP_CATALOG.find(a => a.id === appId);
+  const data = activeInstalls[appId];
+  if (!app || !data) return;
+
+  const totalSize = app.size;
+  const speed = Math.random() * 20 + 10; 
+  const intervalMs = 100;
+  const mbPerTick = (speed * intervalMs) / 1000;
+
+  data.timer = setInterval(() => {
+    if (data.paused) return;
+    data.downloaded += mbPerTick;
+
+    const progBar = document.getElementById(`prog-${appId}`);
+    const progText = document.getElementById(`prog-text-${appId}`);
+
+    if (data.downloaded >= totalSize) {
+      data.downloaded = totalSize;
+      clearInterval(data.timer);
+      delete activeInstalls[appId];
+      
+      saveInstalledApp(app);
+      installedApps.push(app);
+      
+      showToast('Installation Complete', `${app.name} installed successfully.`, app.icon);
+      renderStartMenu();
+      
+      const activeStoreWin = openWindows['store'];
+      if (activeStoreWin) renderStore(activeStoreWin.el.querySelector('.window-body'), 'home');
+    } else {
+      const percent = (data.downloaded / totalSize) * 100;
+      if (progBar) progBar.style.width = `${percent}%`;
+      if (progText) progText.innerText = `${Math.round(data.downloaded)} MB / ${formatSize(totalSize)}`;
+    }
+  }, intervalMs);
+}
+
+function togglePauseInstall(appId) {
+  const data = activeInstalls[appId];
+  if (!data) return;
+  data.paused = !data.paused;
+  const pauseBtn = document.getElementById(`pause-btn-${appId}`);
+  const mainBtn = document.getElementById(`btn-${appId}`);
+  if (pauseBtn) pauseBtn.innerText = data.paused ? 'Resume' : 'Pause';
+  if (mainBtn) mainBtn.innerText = data.paused ? 'Paused' : 'Downloading...';
+}
+
+function cancelInstall(appId) {
+  const data = activeInstalls[appId];
+  if (data) {
+    if (data.timer) clearInterval(data.timer);
+    delete activeInstalls[appId];
+  }
+  showToast('Download Cancelled', `Download of ${ALL_APPS_MAP[appId]?.name || appId} cancelled.`, ALL_APPS_MAP[appId]?.icon || '');
+
+  const activeStoreWin = openWindows['store'];
+  if (activeStoreWin) renderStore(activeStoreWin.el.querySelector('.window-body'), 'home');
+}
+
+function uninstallApp(appId) {
+  const app = ALL_APPS_MAP[appId];
+  if (!app) return;
+
+  removeInstalledApp(appId);
+  installedApps = installedApps.filter(a => a.id !== appId);
+  showToast('App Uninstalled', `${app.name} has been removed.`, app.icon);
+  
+  renderStartMenu();
+  if (openWindows['store']) renderStore(openWindows['store'].el.querySelector('.window-body'), 'home');
+  if (openWindows['settings']) renderSettingsView(openWindows['settings'].el.querySelector('.window-body'), 'apps');
+  if (openWindows[appId]) closeApp(appId);
+}
+
+/* SHUTDOWN / RESTART */
+document.getElementById('btnShutdown').addEventListener('click', () => {
+  document.getElementById('startMenu').classList.remove('open');
+  const animScreen = document.getElementById('shutdown-anim-screen');
+  animScreen.style.display = 'flex';
+  setTimeout(() => {
+    animScreen.style.display = 'none';
+    document.getElementById('shutdown-screen').style.display = 'flex';
+  }, 2000);
+});
+
+document.getElementById('btnRestart').addEventListener('click', () => {
+  document.getElementById('startMenu').classList.remove('open');
+  document.getElementById('restart-screen').style.display = 'flex';
+  setTimeout(() => { location.reload(); }, 3000);
+});
+
+function openWeatherWidget() { document.getElementById('weatherWidgetWindow').classList.add('open'); }
+function closeWeatherWidget() { document.getElementById('weatherWidgetWindow').classList.remove('open'); }
+
+function showBlueLoader() {
+  const loader = document.getElementById('blue-loader');
+  if (!loader) return;
+  loader.style.display = 'block';
+  setTimeout(() => { loader.style.display = 'none'; }, 1000);
+}
+
+/* CONTEXT MENU */
+const contextMenu = document.getElementById('contextMenu');
+let contextMenuOpenedAt = 0;
+
+function showContextMenuAt(x, y) {
+  const vw = window.innerWidth, vh = window.innerHeight;
+  const w = contextMenu.offsetWidth || 180;
+  const h = contextMenu.offsetHeight || 160;
+  x = Math.max(4, Math.min(x, vw - w - 4));
+  y = Math.max(4, Math.min(y, vh - h - 4));
+  contextMenu.style.left = x + 'px';
+  contextMenu.style.top = y + 'px';
+  contextMenu.style.display = 'block';
+  contextMenuOpenedAt = Date.now();
+}
+function closeContextMenu() { contextMenu.style.display = 'none'; }
+
+function showIconContextMenu(x, y, appKey) {
+  const icon = ALL_APPS_MAP[appKey];
+  contextMenu.innerHTML = `
+    <div class="context-item" data-action="open"><i class="fas fa-folder-open"></i> Open</div>
+    <div class="context-sep"></div>
+    <div class="context-item" data-action="properties"><i class="fas fa-circle-info"></i> Properties</div>
+  `;
+  contextMenu.querySelectorAll('.context-item').forEach(item => {
+    item.onclick = (ev) => {
+      ev.stopPropagation();
+      const action = item.dataset.action;
+      if (action === 'open') openApp(appKey);
+      else if (action === 'properties') {
+        showToast('Properties', `${icon.name} - Application (${formatSize(icon.size)})`, icon.icon);
+      }
+      closeContextMenu();
+    };
+  });
+  showContextMenuAt(x, y);
+}
+
+function showDesktopContextMenu(x, y) {
+  contextMenu.innerHTML = `
+    <div class="context-item" data-action="refresh"><i class="fas fa-sync-alt"></i> Refresh</div>
+    <div class="context-sep"></div>
+    <div class="context-item" data-action="personalize"><i class="fas fa-palette"></i> Personalization</div>
+  `;
+  contextMenu.querySelectorAll('.context-item').forEach(item => {
+    item.onclick = (ev) => {
+      ev.stopPropagation();
+      const action = item.dataset.action;
+      if (action === 'refresh') showBlueLoader();
+      else if (action === 'personalize') openApp('settings');
+      closeContextMenu();
+    };
+  });
+  showContextMenuAt(x, y);
+}
+
+document.addEventListener('click', (e) => {
+  if (!e.target.closest('.context-menu')) {
+    if (Date.now() - contextMenuOpenedAt < 350) return;
+    closeContextMenu();
+  }
+});
+
+/* DESKTOP ICON SELECTION & HANDLERS */
+function selectIcon(icon) {
+  document.querySelectorAll('.desktop-icon').forEach(i => i.classList.remove('selected'));
+  icon.classList.add('selected');
+}
+function deselectAllIcons() {
+  document.querySelectorAll('.desktop-icon').forEach(i => i.classList.remove('selected'));
+}
+
+let iconTapCount = 0;
+let iconTapTimer = null;
+
+document.querySelectorAll('.desktop-icon').forEach(icon => {
+  icon.addEventListener('pointerdown', (e) => {
+    if (e.pointerType === 'mouse' && e.button !== 0) return;
+    e.stopPropagation();
+    iconTapCount++;
+    clearTimeout(iconTapTimer);
+
+    if (iconTapCount === 1) {
+      iconTapTimer = setTimeout(() => { selectIcon(icon); iconTapCount = 0; }, 320);
+    } else if (iconTapCount === 2) {
+      iconTapTimer = setTimeout(() => { selectIcon(icon); openApp(icon.dataset.app); iconTapCount = 0; }, 320);
+    } else if (iconTapCount >= 3) {
+      clearTimeout(iconTapTimer);
+      iconTapCount = 0;
+      const rect = icon.getBoundingClientRect();
+      showIconContextMenu(rect.left + rect.width / 2, rect.bottom + 4, icon.dataset.app);
+    }
+  });
+
+  icon.addEventListener('dblclick', (e) => {
+    selectIcon(icon);
+    openApp(icon.dataset.app);
+  });
+
+  icon.addEventListener('contextmenu', (e) => {
+    e.preventDefault();
+    e.stopPropagation();
+    selectIcon(icon);
+    showIconContextMenu(e.clientX, e.clientY, icon.dataset.app);
+  });
+});
+
+const desktopSurface = document.getElementById('desktopSurface');
+
+desktopSurface.addEventListener('contextmenu', (e) => {
+  e.preventDefault();
+  if (e.target.closest('.desktop-icon')) return;
+  showDesktopContextMenu(e.clientX, e.clientY);
+});
+
+let surfaceTapCount = 0;
+let surfaceTapTimer = null;
+
+desktopSurface.addEventListener('pointerdown', (e) => {
+  if (e.target !== desktopSurface) return;
+  if (e.pointerType === 'mouse' && e.button !== 0) return;
+
+  surfaceTapCount++;
+  clearTimeout(surfaceTapTimer);
+
+  if (surfaceTapCount >= 3) {
+    clearTimeout(surfaceTapTimer);
+    surfaceTapCount = 0;
+    showDesktopContextMenu(e.clientX, e.clientY);
+    return;
+  }
+  surfaceTapTimer = setTimeout(() => { surfaceTapCount = 0; }, 400);
+});
+
+const selectionBox = document.getElementById('selection-box');
+let isSelecting = false, selStartX = 0, selStartY = 0, didDrag = false;
+let suppressDeselect = false;
+
+desktopSurface.addEventListener('mousedown', (e) => {
+  if (e.target !== desktopSurface) return;
+  if (e.button !== 0) return;
+  isSelecting = true;
+  didDrag = false;
+  selStartX = e.clientX;
+  selStartY = e.clientY;
+  selectionBox.style.left = selStartX + 'px';
+  selectionBox.style.top = selStartY + 'px';
+  selectionBox.style.width = '0px';
+  selectionBox.style.height = '0px';
+  selectionBox.style.display = 'block';
+});
+
+document.addEventListener('mousemove', (e) => {
+  if (!isSelecting) return;
+  const w = Math.abs(e.clientX - selStartX);
+  const h = Math.abs(e.clientY - selStartY);
+  if (w > 4 || h > 4) didDrag = true;
+  const boxLeft = Math.min(e.clientX, selStartX);
+  const boxTop  = Math.min(e.clientY, selStartY);
+  const boxRight  = boxLeft + w;
+  const boxBottom = boxTop  + h;
+  selectionBox.style.left = boxLeft + 'px';
+  selectionBox.style.top  = boxTop  + 'px';
+  selectionBox.style.width  = w + 'px';
+  selectionBox.style.height = h + 'px';
+  document.querySelectorAll('.desktop-icon').forEach(icon => {
+    const r = icon.getBoundingClientRect();
+    const hit = !(r.right < boxLeft || r.left > boxRight || r.bottom < boxTop || r.top > boxBottom);
+    icon.classList.toggle('selected', hit);
+  });
+});
+
+document.addEventListener('mouseup', () => {
+  if (!isSelecting) return;
+  isSelecting = false;
+  setTimeout(() => { selectionBox.style.display = 'none'; }, 90);
+  if (didDrag) {
+    suppressDeselect = true;
+    setTimeout(() => { suppressDeselect = false; }, 60);
+  }
+});
+
+desktopSurface.addEventListener('click', (e) => {
+  if (e.target !== desktopSurface) return;
+  if (suppressDeselect) return;
+  deselectAllIcons();
+  document.getElementById('startMenu').classList.remove('open');
+  closeFlyout();
+});
+
+/* TRAY FLYOUT INTEGRATION */
+const trayFlyout = document.getElementById('trayFlyout');
+const flyoutTitle = document.getElementById('flyoutTitle');
+const flyoutContent = document.getElementById('flyoutContent');
+
+function closeFlyout() { trayFlyout.classList.remove('open'); }
+
+document.querySelectorAll('.tray-item, .tray-clock').forEach(item => {
+  item.addEventListener('click', (e) => {
+    e.stopPropagation();
+    const type = item.dataset.tray;
+    if (trayFlyout.classList.contains('open') && trayFlyout.dataset.active === type) { closeFlyout(); return; }
+    trayFlyout.dataset.active = type;
+    flyoutContent.innerHTML = '';
+
+    if (type === 'up') {
+      flyoutTitle.textContent = 'Hidden Icons';
+      flyoutContent.innerHTML = `
+        <div class="flyout-row" style="display:flex; justify-content:space-around; padding:10px 0;">
+          <img src="https://img.icons8.com/color/48/windows-security.png" style="width:20px; height:20px; cursor:pointer;" title="Windows Security" onclick="showToast('Windows Security', 'Actions needed in Windows Security.', 'https://img.icons8.com/color/48/windows-security.png')">
+          <img src="https://img.icons8.com/ios/50/synchronize.png" style="width:18px; height:18px; cursor:pointer; filter:brightness(0);" title="Sync Center">
+          <img src="https://img.icons8.com/deco/48/skydrive.png" style="width:18px; height:18px; cursor:pointer;" title="OneDrive">
+        </div>`;
+    } else if (type === 'wifi') {
+      openApp('settings');
+      setTimeout(() => {
+        if (openWindows['settings']) renderSettingsView(openWindows['settings'].el.querySelector('.window-body'), 'network');
+      }, 50);
+      return;
+    } else if (type === 'sound') {
+      flyoutTitle.textContent = 'Sound';
+      flyoutContent.innerHTML = '<div class="flyout-row"><span>Volume</span><span id="volText">75%</span></div>';
+    } else {
+      flyoutTitle.textContent = 'System Status';
+      flyoutContent.innerHTML = '<div class="flyout-row"><span>All systems operational</span></div>';
+    }
+    trayFlyout.classList.add('open');
+  });
+});
+
+document.addEventListener('click', (e) => {
+  if (!e.target.closest('.tray-item') && !e.target.closest('.tray-clock') && !e.target.closest('.tray-flyout')) closeFlyout();
+});
+
+/* TASKBAR & START NAVIGATION */
+const startMenu = document.getElementById('startMenu');
+
+document.getElementById('taskbarCenter').addEventListener('click', (e) => {
+  const icon = e.target.closest('.taskbar-icon');
+  if (!icon) return;
+  const appKey = icon.dataset.app;
+  if (appKey === 'start') {
+    startMenu.classList.toggle('open');
+    return;
+  }
+  openApp(appKey);
+});
+
+document.getElementById('startApps').addEventListener('click', (e) => {
+  const app = e.target.closest('.start-app-item');
+  if (!app) return;
+  openApp(app.dataset.app);
+});
+
+/* CLOCK */
+function updateClock() {
+  const now = new Date();
+  const time = now.toLocaleTimeString([], { hour: '2-digit', minute: '2-digit', hour12: false });
+  const day = String(now.getDate()).padStart(2, '0');
+  const month = String(now.getMonth() + 1).padStart(2, '0');
+  const year = now.getFullYear();
+  document.getElementById('trayTime').textContent = time;
+  document.getElementById('trayDate').textContent = `${day}-${month}-${year}`;
+}
+setInterval(updateClock, 1000);
+updateClock();
+
+window.addEventListener('load', () => {
+  setTimeout(() => {
+    document.getElementById('loading-screen').classList.add('hidden');
+    const startupSound = new Audio('https://files.catbox.moe/a6tds4.mp3');
+    startupSound.play().catch(e => console.log('Audio playback blocked:', e));
+    if (!isFullscreen()) {
+      const hint = document.getElementById('fs-hint');
+      if (hint) {
+        hint.style.display = 'block';
+        setTimeout(hideFsHint, 7000);
+      }
+    }
+  }, 1800);
+});
+
+document.addEventListener('keydown', (e) => {
+  if (e.key === 'Escape') {
+    if (startMenu.classList.contains('open')) startMenu.classList.remove('open');
+    closeFlyout();
+    closeContextMenu();
+  }
+});
+</script>
+
+</body>
+</html>
